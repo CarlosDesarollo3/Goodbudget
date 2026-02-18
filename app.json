@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "Manejo de Sobres",
+    "slug": "manejo-sobres",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"]
+  }
+}
