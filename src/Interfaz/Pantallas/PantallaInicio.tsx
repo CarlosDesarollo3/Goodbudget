@@ -372,7 +372,9 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
           const { y, height } = evento.nativeEvent.layout;
           setZonaRaiz({ y, alto: height });
         }}>
-          <Text variant="labelLarge">Nivel raíz (suelta aquí para sacar fuera del grupo)</Text>
+          {nodoArrastrado?.tipo === 'cuenta' ? (
+            <Text variant="labelLarge">Nivel raíz (suelta aquí para sacar fuera del grupo)</Text>
+          ) : null}
         </Surface>
         {cuentasRaiz.map((cuenta) => (
           <View key={`cuenta-raiz-${cuenta.id}`} style={styles.itemContenedor}>
