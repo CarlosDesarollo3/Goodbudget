@@ -11,11 +11,16 @@ import { CalcularTotalesGrupoRecursivo } from '@/Servicios/MotorBalances';
 import { FormatearMoneda } from '@/Utilidades/Formatos';
 
 type TipoNodo = 'grupo' | 'cuenta';
+type TipoCreacion = 'grupo' | 'cuenta';
 
 interface NodoSeleccionado {
   id: string;
   nombre: string;
   tipo: TipoNodo;
+}
+
+interface CreacionPendiente {
+  tipo: TipoCreacion;
 }
 
 export const PantallaInicio = ({ navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaInicio'>): React.JSX.Element => {
@@ -36,6 +41,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
   const [expansionPorGrupo, setExpansionPorGrupo] = React.useState<Record<string, boolean>>({});
   const [nodoRenombrar, setNodoRenombrar] = React.useState<NodoSeleccionado | null>(null);
   const [nodoEliminar, setNodoEliminar] = React.useState<NodoSeleccionado | null>(null);
+  const [creacionPendiente, setCreacionPendiente] = React.useState<CreacionPendiente | null>(null);
   const [nombreTemporal, setNombreTemporal] = React.useState('');
   const [mostrarAvisoGesto, setMostrarAvisoGesto] = React.useState(false);
 
@@ -100,6 +106,32 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     }
 
     setNodoEliminar(null);
+  };
+
+  const abrirDialogoCreacion = (tipo: TipoCreacion): void => {
+    setCreacionPendiente({ tipo });
+    setNombreTemporal('');
+  };
+
+  const confirmarCreacion = (): void => {
+    if (!creacionPendiente) {
+      return;
+    }
+
+    const nombreCapturado = nombreTemporal.trim();
+
+    if (creacionPendiente.tipo === 'cuenta') {
+      const totalCuentasRaiz = cuentasPorGrupo[CLAVE_CUENTAS_RAIZ]?.length ?? 0;
+      const nombreDefecto = `Cuenta ${totalCuentasRaiz + 1}`;
+      CrearCuenta(nombreCapturado || nombreDefecto, null);
+    } else {
+      const gruposRaiz = grupos.filter((grupo) => grupo.idGrupoPadre === null).length;
+      const nombreDefecto = `Grupo ${gruposRaiz + 1}`;
+      CrearGrupo(nombreCapturado || nombreDefecto, null);
+    }
+
+    setCreacionPendiente(null);
+    setNombreTemporal('');
   };
 
   const RenderizarGrupoConContenido = (idGrupo: string, nivel = 0): React.JSX.Element[] => {
@@ -186,15 +218,26 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
       </ScrollView>
 
       <View style={styles.accionesInferiores}>
-        <Button mode="contained" onPress={() => CrearCuenta(`Cuenta ${cuentasRaiz.length + 1}`, null)}>
+        <Button mode="contained" onPress={() => abrirDialogoCreacion('cuenta')}>
           Nueva cuenta
         </Button>
-        <Button mode="outlined" onPress={() => CrearGrupo(`Grupo ${grupos.filter((grupo) => grupo.idGrupoPadre === null).length + 1}`, null)}>
+        <Button mode="outlined" onPress={() => abrirDialogoCreacion('grupo')}>
           Nuevo grupo
         </Button>
       </View>
 
       <Portal>
+        <Dialog visible={Boolean(creacionPendiente)} onDismiss={() => setCreacionPendiente(null)}>
+          <Dialog.Title>{creacionPendiente?.tipo === 'cuenta' ? 'Nueva cuenta' : 'Nuevo grupo'}</Dialog.Title>
+          <Dialog.Content>
+            <TextInput value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre (opcional)" autoFocus />
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setCreacionPendiente(null)}>Cancelar</Button>
+            <Button onPress={confirmarCreacion}>Crear</Button>
+          </Dialog.Actions>
+        </Dialog>
+
         <Dialog visible={Boolean(nodoRenombrar)} onDismiss={() => setNodoRenombrar(null)}>
           <Dialog.Title>Renombrar {nodoRenombrar?.tipo}</Dialog.Title>
           <Dialog.Content>

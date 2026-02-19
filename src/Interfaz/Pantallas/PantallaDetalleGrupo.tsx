@@ -10,10 +10,16 @@ import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 
 type TipoNodo = 'grupo' | 'cuenta';
 
+type TipoCreacion = 'grupo' | 'cuenta';
+
 interface NodoSeleccionado {
   id: string;
   nombre: string;
   tipo: TipoNodo;
+}
+
+interface CreacionPendiente {
+  tipo: TipoCreacion;
 }
 
 export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaDetalleGrupo'>): React.JSX.Element => {
@@ -35,6 +41,7 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
 
   const [nodoRenombrar, setNodoRenombrar] = useState<NodoSeleccionado | null>(null);
   const [nodoEliminar, setNodoEliminar] = useState<NodoSeleccionado | null>(null);
+  const [creacionPendiente, setCreacionPendiente] = useState<CreacionPendiente | null>(null);
   const [nombreTemporal, setNombreTemporal] = useState('');
   const [mostrarAvisoGesto, setMostrarAvisoGesto] = useState(false);
 
@@ -77,6 +84,30 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
     setNodoEliminar(null);
   };
 
+  const abrirDialogoCreacion = (tipo: TipoCreacion): void => {
+    setCreacionPendiente({ tipo });
+    setNombreTemporal('');
+  };
+
+  const confirmarCreacion = (): void => {
+    if (!creacionPendiente) {
+      return;
+    }
+
+    const nombreCapturado = nombreTemporal.trim();
+
+    if (creacionPendiente.tipo === 'cuenta') {
+      const nombreDefecto = `Cuenta ${cuentas.length + 1}`;
+      CrearCuenta(nombreCapturado || nombreDefecto, idGrupo);
+    } else {
+      const nombreDefecto = `Subgrupo ${subgrupos.length + 1}`;
+      CrearGrupo(nombreCapturado || nombreDefecto, idGrupo);
+    }
+
+    setCreacionPendiente(null);
+    setNombreTemporal('');
+  };
+
   return (
     <View style={styles.contenedor}>
       <ScrollView contentContainerStyle={styles.contenido}>
@@ -114,11 +145,22 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
       </ScrollView>
 
       <View style={styles.accionesInferiores}>
-        <Button mode="contained" onPress={() => CrearCuenta(`Cuenta ${cuentas.length + 1}`, idGrupo)}>Crear cuenta</Button>
-        <Button mode="outlined" onPress={() => CrearGrupo(`Subgrupo ${subgrupos.length + 1}`, idGrupo)}>Crear subgrupo</Button>
+        <Button mode="contained" onPress={() => abrirDialogoCreacion('cuenta')}>Crear cuenta</Button>
+        <Button mode="outlined" onPress={() => abrirDialogoCreacion('grupo')}>Crear subgrupo</Button>
       </View>
 
       <Portal>
+        <Dialog visible={Boolean(creacionPendiente)} onDismiss={() => setCreacionPendiente(null)}>
+          <Dialog.Title>{creacionPendiente?.tipo === 'cuenta' ? 'Nueva cuenta' : 'Nuevo subgrupo'}</Dialog.Title>
+          <Dialog.Content>
+            <TextInput value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre (opcional)" autoFocus />
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setCreacionPendiente(null)}>Cancelar</Button>
+            <Button onPress={confirmarCreacion}>Crear</Button>
+          </Dialog.Actions>
+        </Dialog>
+
         <Dialog visible={Boolean(nodoRenombrar)} onDismiss={() => setNodoRenombrar(null)}>
           <Dialog.Title>Renombrar {nodoRenombrar?.tipo}</Dialog.Title>
           <Dialog.Content>

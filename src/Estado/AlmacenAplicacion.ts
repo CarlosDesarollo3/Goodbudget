@@ -63,12 +63,14 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
   },
 
   CrearGrupo: (nombre, idGrupoPadre) => {
+    InicializarBd();
     const nuevoGrupo: Grupo = { id: GenerarUuid(), nombre, idGrupoPadre, creadoEn: formatISO(new Date()) };
     repositorio.CrearGrupo(nuevoGrupo);
     get().InicializarDatos();
   },
 
   CrearCuenta: (nombre, idGrupoPadre) => {
+    InicializarBd();
     const nuevaCuenta: Cuenta = { id: GenerarUuid(), nombre, idGrupoPadre, creadoEn: formatISO(new Date()) };
     repositorio.CrearCuenta(nuevaCuenta);
     get().InicializarDatos();
