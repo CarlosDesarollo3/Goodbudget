@@ -1,12 +1,11 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { GestureResponderEvent, LayoutChangeEvent, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Dialog, Portal, Snackbar, Surface, Text, TextInput } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { TarjetaGrupo } from '@/Interfaz/Componentes/TarjetaGrupo';
 import { TarjetaCuenta } from '@/Interfaz/Componentes/TarjetaCuenta';
-import { FilaDeslizableAcciones } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
-import { CerrarFilaAbierta } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
+import { CerrarFilaAbierta, FilaDeslizableAcciones } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
 import { CLAVE_CUENTAS_RAIZ, UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 import { CalcularTotalesGrupoRecursivo } from '@/Servicios/MotorBalances';
 import { FormatearMoneda } from '@/Utilidades/Formatos';
@@ -24,6 +23,18 @@ interface CreacionPendiente {
   tipo: TipoCreacion;
 }
 
+interface NodoArrastrable {
+  id: string;
+  nombre: string;
+  tipo: TipoNodo;
+}
+
+interface ZonaArrastre {
+  y: number;
+  alto: number;
+  idGrupoPadre: string | null;
+}
+
 export const PantallaInicio = ({ navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaInicio'>): React.JSX.Element => {
   const {
     grupos,
@@ -36,6 +47,8 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     CrearCuenta,
     RenombrarGrupo,
     RenombrarCuenta,
+    ReubicarGrupo,
+    ReubicarCuenta,
     EliminarGrupo,
     EliminarCuenta
   } = UsarAlmacenAplicacion();
@@ -45,6 +58,12 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
   const [creacionPendiente, setCreacionPendiente] = React.useState<CreacionPendiente | null>(null);
   const [nombreTemporal, setNombreTemporal] = React.useState('');
   const [mostrarAvisoGesto, setMostrarAvisoGesto] = React.useState(false);
+  const [avisoReubicacion, setAvisoReubicacion] = React.useState<string | null>(null);
+  const [nodoArrastrado, setNodoArrastrado] = React.useState<NodoArrastrable | null>(null);
+  const [objetivoArrastre, setObjetivoArrastre] = React.useState<string | null>(null);
+  const [zonaRaiz, setZonaRaiz] = React.useState<{ y: number; alto: number }>({ y: 0, alto: 0 });
+  const zonasArrastre = React.useRef<Record<string, ZonaArrastre>>({});
+  const scrollActualRef = React.useRef(0);
 
   React.useEffect(() => {
     InicializarDatos();
@@ -135,6 +154,97 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     setNombreTemporal('');
   };
 
+  const registrarZonaArrastre = (clave: string, idGrupoPadre: string | null) => (evento: LayoutChangeEvent): void => {
+    const { y, height } = evento.nativeEvent.layout;
+    zonasArrastre.current[clave] = { y, alto: height, idGrupoPadre };
+  };
+
+  const iniciarArrastre = (nodo: NodoArrastrable): void => {
+    CerrarFilaAbierta();
+    setNodoArrastrado(nodo);
+    setObjetivoArrastre(null);
+    setAvisoReubicacion(`Arrastrando ${nodo.tipo} "${nodo.nombre}". Suelta sobre un grupo o sobre "Nivel raíz".`);
+  };
+
+  const esDescendienteDeGrupo = (idGrupoObjetivo: string, idGrupoOrigen: string): boolean => {
+    const cola = grupos.filter((grupo) => grupo.idGrupoPadre === idGrupoOrigen).map((grupo) => grupo.id);
+
+    while (cola.length > 0) {
+      const actual = cola.shift();
+      if (!actual) {
+        continue;
+      }
+
+      if (actual === idGrupoObjetivo) {
+        return true;
+      }
+
+      grupos
+        .filter((grupo) => grupo.idGrupoPadre === actual)
+        .forEach((grupo) => cola.push(grupo.id));
+    }
+
+    return false;
+  };
+
+  const esObjetivoValido = (idGrupoDestino: string | null): boolean => {
+    if (!nodoArrastrado) {
+      return false;
+    }
+
+    if (nodoArrastrado.tipo === 'cuenta') {
+      return true;
+    }
+
+    if (idGrupoDestino === null) {
+      return true;
+    }
+
+    if (idGrupoDestino === nodoArrastrado.id) {
+      return false;
+    }
+
+    return !esDescendienteDeGrupo(idGrupoDestino, nodoArrastrado.id);
+  };
+
+  const actualizarObjetivoArrastre = (evento: GestureResponderEvent): void => {
+    if (!nodoArrastrado) {
+      return;
+    }
+
+    const posicionY = evento.nativeEvent.locationY + scrollActualRef.current;
+    const zonaDetectada = Object.entries(zonasArrastre.current).find(([, zona]) => posicionY >= zona.y && posicionY <= zona.y + zona.alto);
+
+    if (zonaDetectada && esObjetivoValido(zonaDetectada[1].idGrupoPadre)) {
+      setObjetivoArrastre(zonaDetectada[1].idGrupoPadre ?? '__ROOT__');
+      return;
+    }
+
+    const dentroRaiz = posicionY >= zonaRaiz.y && posicionY <= zonaRaiz.y + zonaRaiz.alto;
+    setObjetivoArrastre(dentroRaiz && esObjetivoValido(null) ? '__ROOT__' : null);
+  };
+
+  const confirmarArrastre = (): void => {
+    if (!nodoArrastrado || !objetivoArrastre) {
+      setNodoArrastrado(null);
+      setObjetivoArrastre(null);
+      return;
+    }
+
+    const idGrupoDestino = objetivoArrastre === '__ROOT__' ? null : objetivoArrastre;
+
+    if (nodoArrastrado.tipo === 'cuenta') {
+      ReubicarCuenta(nodoArrastrado.id, idGrupoDestino);
+      setAvisoReubicacion(`Cuenta "${nodoArrastrado.nombre}" reubicada.`);
+    } else {
+      const reubicado = ReubicarGrupo(nodoArrastrado.id, idGrupoDestino);
+      setAvisoReubicacion(reubicado ? `Grupo "${nodoArrastrado.nombre}" reubicado.` : 'No se puede mover un grupo dentro de sí mismo o sus descendientes.');
+    }
+
+    setNodoArrastrado(null);
+    setObjetivoArrastre(null);
+  };
+
   const RenderizarGrupoConContenido = (idGrupo: string, nivel = 0): React.JSX.Element[] => {
     const grupo = grupos.find((item) => item.id === idGrupo);
 
@@ -145,21 +255,23 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     const cuentasGrupo = cuentasPorGrupo[idGrupo] ?? [];
     const subgrupos = grupos.filter((item) => item.idGrupoPadre === idGrupo);
     const expandido = expansionPorGrupo[idGrupo] ?? true;
+    const grupoEsObjetivo = objetivoArrastre === grupo.id;
 
     const contenidoExpandido = expandido
       ? [
           ...cuentasGrupo.map((cuenta) => (
             <View key={`cuenta-${cuenta.id}`} style={[styles.itemContenedor, { marginLeft: (nivel + 1) * 10 }]}> 
-                <FilaDeslizableAcciones
-                  id={cuenta.id}
-                  onEditar={() => abrirDialogoRenombrar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
-                  onEliminar={() => setNodoEliminar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
-                  onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
-                >
+              <FilaDeslizableAcciones
+                id={cuenta.id}
+                onEditar={() => abrirDialogoRenombrar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
+                onEliminar={() => setNodoEliminar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
+                onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
+              >
                 <TarjetaCuenta
                   nombre={cuenta.nombre}
                   balance={ObtenerBalanceCuenta(cuenta.id)}
                   moneda={moneda}
+                  AlSostener={() => iniciarArrastre({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
                   AlPresionar={() => navigation.navigate('PantallaDetalleCuenta', { idCuenta: cuenta.id, nombreCuenta: cuenta.nombre })}
                 />
               </FilaDeslizableAcciones>
@@ -170,7 +282,11 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
       : [];
 
     return [
-      <View key={`grupo-${grupo.id}`} style={[styles.itemContenedor, { marginLeft: nivel * 10 }]}> 
+      <View
+        key={`grupo-${grupo.id}`}
+        style={[styles.itemContenedor, { marginLeft: nivel * 10 }]}
+        onLayout={registrarZonaArrastre(`grupo-${grupo.id}`, grupo.id)}
+      >
         <FilaDeslizableAcciones
           id={grupo.id}
           onEditar={() => abrirDialogoRenombrar({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
@@ -182,6 +298,8 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
             total={CalcularTotalesGrupoRecursivo(grupo.id, grupos, cuentas, mapaBalances)}
             moneda={moneda}
             expandido={expandido}
+            estilo={grupoEsObjetivo ? styles.destinoActivo : undefined}
+            AlSostener={() => iniciarArrastre({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
             AlAlternarExpansion={() => alternarExpansion(grupo.id)}
             AlPresionar={() => navigation.navigate('PantallaDetalleGrupo', { idGrupo: grupo.id, nombreGrupo: grupo.nombre })}
           />
@@ -200,10 +318,29 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
         <Text variant="headlineSmall" style={totalGeneral >= 0 ? styles.montoPositivo : styles.montoNegativo}>{FormatearMoneda(totalGeneral, moneda)}</Text>
       </Surface>
 
-      <ScrollView contentContainerStyle={styles.listaContenedora} onStartShouldSetResponder={() => { CerrarFilaAbierta(); return false; }}>
+      <ScrollView
+        contentContainerStyle={styles.listaContenedora}
+        onStartShouldSetResponder={() => {
+          CerrarFilaAbierta();
+          return false;
+        }}
+        onScroll={(evento) => {
+          scrollActualRef.current = evento.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
+        onTouchMove={actualizarObjetivoArrastre}
+        onTouchEnd={confirmarArrastre}
+      >
+        <Surface style={[styles.zonaRaiz, objetivoArrastre === '__ROOT__' ? styles.destinoActivo : undefined]} elevation={0} onLayout={(evento) => {
+          const { y, height } = evento.nativeEvent.layout;
+          setZonaRaiz({ y, alto: height });
+        }}>
+          <Text variant="labelLarge">Nivel raíz (suelta aquí para sacar fuera del grupo)</Text>
+        </Surface>
         {cuentasRaiz.map((cuenta) => (
           <View key={`cuenta-raiz-${cuenta.id}`} style={styles.itemContenedor}>
             <FilaDeslizableAcciones
+              id={cuenta.id}
               onEditar={() => abrirDialogoRenombrar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
               onEliminar={() => setNodoEliminar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
               onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
@@ -212,6 +349,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
                 nombre={cuenta.nombre}
                 balance={ObtenerBalanceCuenta(cuenta.id)}
                 moneda={moneda}
+                AlSostener={() => iniciarArrastre({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
                 AlPresionar={() => navigation.navigate('PantallaDetalleCuenta', { idCuenta: cuenta.id, nombreCuenta: cuenta.nombre })}
               />
             </FilaDeslizableAcciones>
@@ -267,6 +405,9 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
       <Snackbar visible={mostrarAvisoGesto} onDismiss={() => setMostrarAvisoGesto(false)} duration={1800}>
         Completa el gesto para activar la acción
       </Snackbar>
+      <Snackbar visible={Boolean(avisoReubicacion)} onDismiss={() => setAvisoReubicacion(null)} duration={2200}>
+        {avisoReubicacion}
+      </Snackbar>
     </View>
   );
 };
@@ -285,6 +426,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: '#FFFFFF'
   },
+  zonaRaiz: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#B8C5D5',
+    marginBottom: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#F8FBFF'
+  },
   textoSecundario: {
     opacity: 0.75,
     marginBottom: 4
@@ -300,6 +451,10 @@ const styles = StyleSheet.create({
   },
   itemContenedor: {
     marginBottom: 6
+  },
+  destinoActivo: {
+    borderWidth: 2,
+    borderColor: '#4A7DB8'
   },
   accionesInferiores: {
     position: 'absolute',
