@@ -1,17 +1,49 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Surface, Text } from 'react-native-paper';
+import { Button, Dialog, Portal, Snackbar, Surface, Text, TextInput } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { TarjetaGrupo } from '@/Interfaz/Componentes/TarjetaGrupo';
 import { TarjetaCuenta } from '@/Interfaz/Componentes/TarjetaCuenta';
+import { FilaDeslizableAcciones } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
 import { CLAVE_CUENTAS_RAIZ, UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 import { CalcularTotalesGrupoRecursivo } from '@/Servicios/MotorBalances';
 import { FormatearMoneda } from '@/Utilidades/Formatos';
 
+type TipoNodo = 'grupo' | 'cuenta';
+type TipoCreacion = 'grupo' | 'cuenta';
+
+interface NodoSeleccionado {
+  id: string;
+  nombre: string;
+  tipo: TipoNodo;
+}
+
+interface CreacionPendiente {
+  tipo: TipoCreacion;
+}
+
 export const PantallaInicio = ({ navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaInicio'>): React.JSX.Element => {
-  const { grupos, cuentasPorGrupo, moneda, InicializarDatos, ObtenerBalanceCuenta, EjecutarReglasPendientes, CrearGrupo, CrearCuenta } = UsarAlmacenAplicacion();
+  const {
+    grupos,
+    cuentasPorGrupo,
+    moneda,
+    InicializarDatos,
+    ObtenerBalanceCuenta,
+    EjecutarReglasPendientes,
+    CrearGrupo,
+    CrearCuenta,
+    RenombrarGrupo,
+    RenombrarCuenta,
+    EliminarGrupo,
+    EliminarCuenta
+  } = UsarAlmacenAplicacion();
   const [expansionPorGrupo, setExpansionPorGrupo] = React.useState<Record<string, boolean>>({});
+  const [nodoRenombrar, setNodoRenombrar] = React.useState<NodoSeleccionado | null>(null);
+  const [nodoEliminar, setNodoEliminar] = React.useState<NodoSeleccionado | null>(null);
+  const [creacionPendiente, setCreacionPendiente] = React.useState<CreacionPendiente | null>(null);
+  const [nombreTemporal, setNombreTemporal] = React.useState('');
+  const [mostrarAvisoGesto, setMostrarAvisoGesto] = React.useState(false);
 
   React.useEffect(() => {
     InicializarDatos();
@@ -37,6 +69,71 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     setExpansionPorGrupo((anterior) => ({ ...anterior, [idGrupo]: !anterior[idGrupo] }));
   };
 
+  const abrirDialogoRenombrar = (nodo: NodoSeleccionado): void => {
+    setNodoRenombrar(nodo);
+    setNombreTemporal(nodo.nombre);
+  };
+
+  const confirmarRenombrado = (): void => {
+    if (!nodoRenombrar) {
+      return;
+    }
+
+    const nuevoNombre = nombreTemporal.trim();
+    if (!nuevoNombre) {
+      return;
+    }
+
+    if (nodoRenombrar.tipo === 'grupo') {
+      RenombrarGrupo(nodoRenombrar.id, nuevoNombre);
+    } else {
+      RenombrarCuenta(nodoRenombrar.id, nuevoNombre);
+    }
+
+    setNodoRenombrar(null);
+    setNombreTemporal('');
+  };
+
+  const confirmarEliminacion = (): void => {
+    if (!nodoEliminar) {
+      return;
+    }
+
+    if (nodoEliminar.tipo === 'grupo') {
+      EliminarGrupo(nodoEliminar.id);
+    } else {
+      EliminarCuenta(nodoEliminar.id);
+    }
+
+    setNodoEliminar(null);
+  };
+
+  const abrirDialogoCreacion = (tipo: TipoCreacion): void => {
+    setCreacionPendiente({ tipo });
+    setNombreTemporal('');
+  };
+
+  const confirmarCreacion = (): void => {
+    if (!creacionPendiente) {
+      return;
+    }
+
+    const nombreCapturado = nombreTemporal.trim();
+
+    if (creacionPendiente.tipo === 'cuenta') {
+      const totalCuentasRaiz = cuentasPorGrupo[CLAVE_CUENTAS_RAIZ]?.length ?? 0;
+      const nombreDefecto = `Cuenta ${totalCuentasRaiz + 1}`;
+      CrearCuenta(nombreCapturado || nombreDefecto, null);
+    } else {
+      const gruposRaiz = grupos.filter((grupo) => grupo.idGrupoPadre === null).length;
+      const nombreDefecto = `Grupo ${gruposRaiz + 1}`;
+      CrearGrupo(nombreCapturado || nombreDefecto, null);
+    }
+
+    setCreacionPendiente(null);
+    setNombreTemporal('');
+  };
+
   const RenderizarGrupoConContenido = (idGrupo: string, nivel = 0): React.JSX.Element[] => {
     const grupo = grupos.find((item) => item.id === idGrupo);
 
@@ -51,13 +148,19 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     const contenidoExpandido = expandido
       ? [
           ...cuentasGrupo.map((cuenta) => (
-            <View key={`cuenta-${cuenta.id}`} style={[styles.itemContenedor, { marginLeft: (nivel + 1) * 10 }]}> 
-              <TarjetaCuenta
-                nombre={cuenta.nombre}
-                balance={ObtenerBalanceCuenta(cuenta.id)}
-                moneda={moneda}
-                AlPresionar={() => navigation.navigate('PantallaDetalleCuenta', { idCuenta: cuenta.id, nombreCuenta: cuenta.nombre })}
-              />
+            <View key={`cuenta-${cuenta.id}`} style={[styles.itemContenedor, { marginLeft: (nivel + 1) * 10 }]}>
+              <FilaDeslizableAcciones
+                onEditar={() => abrirDialogoRenombrar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
+                onEliminar={() => setNodoEliminar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
+                onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
+              >
+                <TarjetaCuenta
+                  nombre={cuenta.nombre}
+                  balance={ObtenerBalanceCuenta(cuenta.id)}
+                  moneda={moneda}
+                  AlPresionar={() => navigation.navigate('PantallaDetalleCuenta', { idCuenta: cuenta.id, nombreCuenta: cuenta.nombre })}
+                />
+              </FilaDeslizableAcciones>
             </View>
           )),
           ...subgrupos.flatMap((subgrupo) => RenderizarGrupoConContenido(subgrupo.id, nivel + 1))
@@ -65,15 +168,21 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
       : [];
 
     return [
-      <View key={`grupo-${grupo.id}`} style={[styles.itemContenedor, { marginLeft: nivel * 10 }]}> 
-        <TarjetaGrupo
-          nombre={grupo.nombre}
-          total={CalcularTotalesGrupoRecursivo(grupo.id, grupos, cuentas, mapaBalances)}
-          moneda={moneda}
-          expandido={expandido}
-          AlAlternarExpansion={() => alternarExpansion(grupo.id)}
-          AlPresionar={() => navigation.navigate('PantallaDetalleGrupo', { idGrupo: grupo.id, nombreGrupo: grupo.nombre })}
-        />
+      <View key={`grupo-${grupo.id}`} style={[styles.itemContenedor, { marginLeft: nivel * 10 }]}>
+        <FilaDeslizableAcciones
+          onEditar={() => abrirDialogoRenombrar({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
+          onEliminar={() => setNodoEliminar({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
+          onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
+        >
+          <TarjetaGrupo
+            nombre={grupo.nombre}
+            total={CalcularTotalesGrupoRecursivo(grupo.id, grupos, cuentas, mapaBalances)}
+            moneda={moneda}
+            expandido={expandido}
+            AlAlternarExpansion={() => alternarExpansion(grupo.id)}
+            AlPresionar={() => navigation.navigate('PantallaDetalleGrupo', { idGrupo: grupo.id, nombreGrupo: grupo.nombre })}
+          />
+        </FilaDeslizableAcciones>
       </View>,
       ...contenidoExpandido
     ];
@@ -91,25 +200,70 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
       <ScrollView contentContainerStyle={styles.listaContenedora}>
         {cuentasRaiz.map((cuenta) => (
           <View key={`cuenta-raiz-${cuenta.id}`} style={styles.itemContenedor}>
-            <TarjetaCuenta
-              nombre={cuenta.nombre}
-              balance={ObtenerBalanceCuenta(cuenta.id)}
-              moneda={moneda}
-              AlPresionar={() => navigation.navigate('PantallaDetalleCuenta', { idCuenta: cuenta.id, nombreCuenta: cuenta.nombre })}
-            />
+            <FilaDeslizableAcciones
+              onEditar={() => abrirDialogoRenombrar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
+              onEliminar={() => setNodoEliminar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
+              onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
+            >
+              <TarjetaCuenta
+                nombre={cuenta.nombre}
+                balance={ObtenerBalanceCuenta(cuenta.id)}
+                moneda={moneda}
+                AlPresionar={() => navigation.navigate('PantallaDetalleCuenta', { idCuenta: cuenta.id, nombreCuenta: cuenta.nombre })}
+              />
+            </FilaDeslizableAcciones>
           </View>
         ))}
         {grupos.filter((grupo) => grupo.idGrupoPadre === null).flatMap((grupo) => RenderizarGrupoConContenido(grupo.id))}
       </ScrollView>
 
       <View style={styles.accionesInferiores}>
-        <Button mode="contained" onPress={() => CrearCuenta(`Cuenta ${cuentasRaiz.length + 1}`, null)}>
+        <Button mode="contained" onPress={() => abrirDialogoCreacion('cuenta')}>
           Nueva cuenta
         </Button>
-        <Button mode="outlined" onPress={() => CrearGrupo(`Grupo ${grupos.filter((grupo) => grupo.idGrupoPadre === null).length + 1}`, null)}>
+        <Button mode="outlined" onPress={() => abrirDialogoCreacion('grupo')}>
           Nuevo grupo
         </Button>
       </View>
+
+      <Portal>
+        <Dialog visible={Boolean(creacionPendiente)} onDismiss={() => setCreacionPendiente(null)}>
+          <Dialog.Title>{creacionPendiente?.tipo === 'cuenta' ? 'Nueva cuenta' : 'Nuevo grupo'}</Dialog.Title>
+          <Dialog.Content>
+            <TextInput value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre (opcional)" autoFocus />
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setCreacionPendiente(null)}>Cancelar</Button>
+            <Button onPress={confirmarCreacion}>Crear</Button>
+          </Dialog.Actions>
+        </Dialog>
+
+        <Dialog visible={Boolean(nodoRenombrar)} onDismiss={() => setNodoRenombrar(null)}>
+          <Dialog.Title>Renombrar {nodoRenombrar?.tipo}</Dialog.Title>
+          <Dialog.Content>
+            <TextInput value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre" autoFocus />
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setNodoRenombrar(null)}>Cancelar</Button>
+            <Button onPress={confirmarRenombrado}>Guardar</Button>
+          </Dialog.Actions>
+        </Dialog>
+
+        <Dialog visible={Boolean(nodoEliminar)} onDismiss={() => setNodoEliminar(null)}>
+          <Dialog.Title>Confirmar eliminación</Dialog.Title>
+          <Dialog.Content>
+            <Text>¿Seguro que deseas eliminar {nodoEliminar?.tipo} "{nodoEliminar?.nombre}"?</Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setNodoEliminar(null)}>Cancelar</Button>
+            <Button onPress={confirmarEliminacion}>Eliminar</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      <Snackbar visible={mostrarAvisoGesto} onDismiss={() => setMostrarAvisoGesto(false)} duration={1800}>
+        Completa el gesto para activar la acción
+      </Snackbar>
     </View>
   );
 };
