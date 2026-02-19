@@ -62,14 +62,30 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
   const [nodoArrastrado, setNodoArrastrado] = React.useState<NodoArrastrable | null>(null);
   const [objetivoArrastre, setObjetivoArrastre] = React.useState<string | null>(null);
   const [zonaRaiz, setZonaRaiz] = React.useState<{ y: number; alto: number }>({ y: 0, alto: 0 });
+  const [punteroArrastre, setPunteroArrastre] = React.useState<{ x: number; y: number } | null>(null);
   const zonasArrastre = React.useRef<Record<string, ZonaArrastre>>({});
   const scrollActualRef = React.useRef(0);
+  const vistaRaizRef = React.useRef<View | null>(null);
+  const scrollRef = React.useRef<ScrollView | null>(null);
+  const offsetPantallaVistaRef = React.useRef({ x: 0, y: 0 });
+  const offsetPantallaScrollRef = React.useRef({ x: 0, y: 0 });
 
   React.useEffect(() => {
     InicializarDatos();
     EjecutarReglasPendientes();
+    requestAnimationFrame(medirOffsetsPantalla);
   }, [InicializarDatos, EjecutarReglasPendientes]);
 
+
+  const medirOffsetsPantalla = (): void => {
+    vistaRaizRef.current?.measureInWindow((x, y) => {
+      offsetPantallaVistaRef.current = { x, y };
+    });
+
+    scrollRef.current?.measureInWindow((x, y) => {
+      offsetPantallaScrollRef.current = { x, y };
+    });
+  };
   const cuentas = React.useMemo(() => Object.values(cuentasPorGrupo).flat(), [cuentasPorGrupo]);
   const mapaBalances = React.useMemo(
     () =>
@@ -161,8 +177,10 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
 
   const iniciarArrastre = (nodo: NodoArrastrable): void => {
     CerrarFilaAbierta();
+    medirOffsetsPantalla();
     setNodoArrastrado(nodo);
     setObjetivoArrastre(null);
+    setPunteroArrastre(null);
     setAvisoReubicacion(`Arrastrando ${nodo.tipo} "${nodo.nombre}". Suelta sobre un grupo o sobre "Nivel raíz".`);
   };
 
@@ -212,11 +230,16 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
       return;
     }
 
-    const posicionLocalY = evento.nativeEvent.locationY;
-    const posicionesPosibles = [
-      posicionLocalY,
-      posicionLocalY + scrollActualRef.current
-    ];
+    const posicionPantallaY = evento.nativeEvent.pageY;
+    const posicionPantallaX = evento.nativeEvent.pageX;
+    const posicionContenidoY = posicionPantallaY - offsetPantallaScrollRef.current.y + scrollActualRef.current;
+
+    setPunteroArrastre({
+      x: posicionPantallaX - offsetPantallaVistaRef.current.x,
+      y: posicionPantallaY - offsetPantallaVistaRef.current.y
+    });
+
+    const posicionesPosibles = [posicionContenidoY];
 
     const zonaDetectada = Object.entries(zonasArrastre.current).find(([, zona]) =>
       posicionesPosibles.some((posicionY) => posicionY >= zona.y && posicionY <= zona.y + zona.alto)
@@ -235,6 +258,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     if (!nodoArrastrado || !objetivoArrastre) {
       setNodoArrastrado(null);
       setObjetivoArrastre(null);
+      setPunteroArrastre(null);
       return;
     }
 
@@ -250,6 +274,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
 
     setNodoArrastrado(null);
     setObjetivoArrastre(null);
+    setPunteroArrastre(null);
   };
 
   const RenderizarGrupoConContenido = (idGrupo: string, nivel = 0): React.JSX.Element[] => {
@@ -275,6 +300,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
                 onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
               >
                 <TarjetaCuenta
+                  estilo={nodoArrastrado?.id === cuenta.id && nodoArrastrado.tipo === 'cuenta' ? styles.itemArrastrandose : undefined}
                   nombre={cuenta.nombre}
                   balance={ObtenerBalanceCuenta(cuenta.id)}
                   moneda={moneda}
@@ -301,11 +327,11 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
           onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
         >
           <TarjetaGrupo
+            estilo={[grupoEsObjetivo ? styles.destinoActivo : undefined, nodoArrastrado?.id === grupo.id && nodoArrastrado.tipo === 'grupo' ? styles.itemArrastrandose : undefined]}
             nombre={grupo.nombre}
             total={CalcularTotalesGrupoRecursivo(grupo.id, grupos, cuentas, mapaBalances)}
             moneda={moneda}
             expandido={expandido}
-            estilo={grupoEsObjetivo ? styles.destinoActivo : undefined}
             AlSostener={() => iniciarArrastre({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
             AlAlternarExpansion={() => alternarExpansion(grupo.id)}
             AlPresionar={() => navigation.navigate('PantallaDetalleGrupo', { idGrupo: grupo.id, nombreGrupo: grupo.nombre })}
@@ -319,18 +345,22 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
   const cuentasRaiz = cuentasPorGrupo[CLAVE_CUENTAS_RAIZ] ?? [];
 
   return (
-    <View style={styles.contenedor}>
+    <View ref={vistaRaizRef} style={styles.contenedor} onLayout={medirOffsetsPantalla}>
       <Surface style={styles.tarjetaTotal} elevation={1}>
         <Text variant="labelLarge" style={styles.textoSecundario}>Total general</Text>
         <Text variant="headlineSmall" style={totalGeneral >= 0 ? styles.montoPositivo : styles.montoNegativo}>{FormatearMoneda(totalGeneral, moneda)}</Text>
       </Surface>
 
       <ScrollView
+        ref={scrollRef}
+        onLayout={medirOffsetsPantalla}
         contentContainerStyle={styles.listaContenedora}
+        scrollEnabled={!nodoArrastrado}
         onStartShouldSetResponder={() => {
           CerrarFilaAbierta();
           return false;
         }}
+        onMoveShouldSetResponderCapture={() => Boolean(nodoArrastrado)}
         onScroll={(evento) => {
           scrollActualRef.current = evento.nativeEvent.contentOffset.y;
         }}
@@ -353,6 +383,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
               onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
             >
               <TarjetaCuenta
+                estilo={nodoArrastrado?.id === cuenta.id && nodoArrastrado.tipo === 'cuenta' ? styles.itemArrastrandose : undefined}
                 nombre={cuenta.nombre}
                 balance={ObtenerBalanceCuenta(cuenta.id)}
                 moneda={moneda}
@@ -364,6 +395,12 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
         ))}
         {grupos.filter((grupo) => grupo.idGrupoPadre === null).flatMap((grupo) => RenderizarGrupoConContenido(grupo.id))}
       </ScrollView>
+
+      {nodoArrastrado && punteroArrastre ? (
+        <Surface pointerEvents="none" style={[styles.indicadorArrastre, { left: punteroArrastre.x - 70, top: punteroArrastre.y - 56 }]} elevation={2}>
+          <Text variant="labelMedium">Moviendo: {nodoArrastrado.nombre}</Text>
+        </Surface>
+      ) : null}
 
       <View style={styles.accionesInferiores}>
         <Button mode="contained" onPress={() => abrirDialogoCreacion('cuenta')}>
@@ -462,6 +499,16 @@ const styles = StyleSheet.create({
   destinoActivo: {
     borderWidth: 2,
     borderColor: '#4A7DB8'
+  },
+  itemArrastrandose: {
+    opacity: 0.55
+  },
+  indicadorArrastre: {
+    position: 'absolute',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFFEE'
   },
   accionesInferiores: {
     position: 'absolute',
