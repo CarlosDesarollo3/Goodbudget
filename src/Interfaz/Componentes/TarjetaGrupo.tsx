@@ -27,7 +27,6 @@ export const TarjetaGrupo = ({ nombre, total, moneda, expandido, AlPresionar, Al
             {AlAlternarExpansion ? (
               <IconButton icon={iconoExpansion} onPress={AlAlternarExpansion} accessibilityLabel={etiquetaExpansion} />
             ) : null}
-            <Avatar.Icon {...props} icon="folder-outline" size={36} style={{ backgroundColor: '#D4DEE9' }} color={tema.colors.primary} />
           </>
         )}
         right={() => (
