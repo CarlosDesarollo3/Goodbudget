@@ -62,6 +62,14 @@ export class RepositorioSqlite
     }
   }
 
+  ActualizarNombreGrupo(idGrupo: string, nombre: string): void {
+    this.bd.runSync('UPDATE grupos SET nombre = ? WHERE id = ?', [nombre, idGrupo]);
+  }
+
+  ActualizarNombreCuenta(idCuenta: string, nombre: string): void {
+    this.bd.runSync('UPDATE cuentas SET nombre = ? WHERE id = ?', [nombre, idCuenta]);
+  }
+
   CrearTransaccion(transaccion: Transaccion): void {
     try {
       this.bd.runSync(
@@ -131,6 +139,20 @@ export class RepositorioSqlite
 
   ActualizarCuentaPadre(idCuenta: string, idGrupoPadre: string | null): void {
     this.bd.runSync('UPDATE cuentas SET idGrupoPadre = ? WHERE id = ?', [idGrupoPadre, idCuenta]);
+  }
+
+  EliminarGrupo(idGrupo: string): void {
+    try {
+      const cuentas = this.bd.getAllSync<Cuenta>('SELECT id FROM cuentas WHERE idGrupoPadre = ?', [idGrupo]);
+      cuentas.forEach((cuenta) => this.EliminarCuenta(cuenta.id));
+
+      const subgrupos = this.bd.getAllSync<Grupo>('SELECT id FROM grupos WHERE idGrupoPadre = ?', [idGrupo]);
+      subgrupos.forEach((subgrupo) => this.EliminarGrupo(subgrupo.id));
+
+      this.bd.runSync('DELETE FROM grupos WHERE id = ?', [idGrupo]);
+    } catch (error) {
+      throw new ErrorDatos('No se pudo eliminar el grupo', error);
+    }
   }
 
   EliminarCuenta(idCuenta: string): void {
