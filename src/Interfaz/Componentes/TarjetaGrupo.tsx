@@ -14,25 +14,25 @@ interface PropsTarjetaGrupo {
 export const TarjetaGrupo = ({ nombre, total, moneda, expandido, AlPresionar, AlAlternarExpansion }: PropsTarjetaGrupo): React.JSX.Element => {
   const tema = useTheme();
   const colorTotal = total >= 0 ? '#1F8F4C' : '#C4362D';
+  const iconoExpansion = expandido ? 'chevron-up' : 'chevron-down';
+  const etiquetaExpansion = expandido ? 'Minimizar grupo' : 'Expandir grupo';
 
   return (
     <Card mode="contained" onPress={AlPresionar} style={{ borderRadius: 14, backgroundColor: '#E8EEF5' }}>
       <Card.Title
         title={nombre}
-        subtitle="Grupo"
         titleVariant="titleMedium"
-        subtitleVariant="bodySmall"
-        left={(props) => <Avatar.Icon {...props} icon="folder-outline" size={36} style={{ backgroundColor: '#D4DEE9' }} color={tema.colors.primary} />}
+        left={(props) => (
+          <>
+            {AlAlternarExpansion ? (
+              <IconButton icon={iconoExpansion} onPress={AlAlternarExpansion} accessibilityLabel={etiquetaExpansion} />
+            ) : null}
+            <Avatar.Icon {...props} icon="folder-outline" size={36} style={{ backgroundColor: '#D4DEE9' }} color={tema.colors.primary} />
+          </>
+        )}
         right={() => (
           <>
             <Text variant="titleSmall" style={{ color: colorTotal, marginRight: 4 }}>{FormatearMoneda(total, moneda)}</Text>
-            {AlAlternarExpansion ? (
-              <IconButton
-                icon={expandido ? 'chevron-up' : 'chevron-down'}
-                onPress={AlAlternarExpansion}
-                accessibilityLabel={expandido ? 'Minimizar grupo' : 'Expandir grupo'}
-              />
-            ) : null}
           </>
         )}
       />
