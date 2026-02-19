@@ -17,9 +17,7 @@ export const TarjetaCuenta = ({ nombre, balance, moneda, AlPresionar }: PropsTar
     <Card mode="outlined" onPress={AlPresionar} style={{ borderRadius: 14, borderColor: '#C4D0DD', backgroundColor: '#F8FAFC' }}>
       <Card.Title
         title={nombre}
-        subtitle="Cuenta/Sobre"
         titleVariant="titleSmall"
-        subtitleVariant="bodySmall"
         left={(props) => <Avatar.Icon {...props} icon="wallet-outline" size={32} style={{ backgroundColor: '#DEE7F0' }} color={tema.colors.primary} />}
         right={() => <Text variant="titleSmall" style={{ color: colorBalance, marginRight: 12 }}>{FormatearMoneda(balance, moneda)}</Text>}
       />

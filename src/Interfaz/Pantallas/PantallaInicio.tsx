@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, FAB, Surface, Text } from 'react-native-paper';
+import { Button, Surface, Text } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { TarjetaGrupo } from '@/Interfaz/Componentes/TarjetaGrupo';
@@ -88,11 +88,6 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
         <Text variant="headlineSmall" style={totalGeneral >= 0 ? styles.montoPositivo : styles.montoNegativo}>{FormatearMoneda(totalGeneral, moneda)}</Text>
       </Surface>
 
-      <View style={styles.accionesInicio}>
-        <Button mode="contained" onPress={() => CrearCuenta('Cuenta principal', null)}>Nueva cuenta</Button>
-        <Button mode="outlined" onPress={() => CrearGrupo('Nuevo grupo', null)}>Nuevo grupo</Button>
-      </View>
-
       <ScrollView contentContainerStyle={styles.listaContenedora}>
         {cuentasRaiz.map((cuenta) => (
           <View key={`cuenta-raiz-${cuenta.id}`} style={styles.itemContenedor}>
@@ -107,12 +102,14 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
         {grupos.filter((grupo) => grupo.idGrupoPadre === null).flatMap((grupo) => RenderizarGrupoConContenido(grupo.id))}
       </ScrollView>
 
-      <FAB
-        icon="plus"
-        label="Nueva cuenta"
-        onPress={() => CrearCuenta('Cuenta principal', null)}
-        style={styles.fab}
-      />
+      <View style={styles.accionesInferiores}>
+        <Button mode="contained" onPress={() => CrearCuenta(`Cuenta ${cuentasRaiz.length + 1}`, null)}>
+          Nueva cuenta
+        </Button>
+        <Button mode="outlined" onPress={() => CrearGrupo(`Grupo ${grupos.filter((grupo) => grupo.idGrupoPadre === null).length + 1}`, null)}>
+          Nuevo grupo
+        </Button>
+      </View>
     </View>
   );
 };
@@ -131,11 +128,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: '#FFFFFF'
   },
-  accionesInicio: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 10
-  },
   textoSecundario: {
     opacity: 0.75,
     marginBottom: 4
@@ -152,9 +144,12 @@ const styles = StyleSheet.create({
   itemContenedor: {
     marginBottom: 6
   },
-  fab: {
+  accionesInferiores: {
     position: 'absolute',
+    left: 16,
     right: 16,
-    bottom: 16
+    bottom: 16,
+    flexDirection: 'row',
+    gap: 8
   }
 });
