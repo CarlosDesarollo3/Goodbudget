@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, FAB, Surface, Text } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -11,15 +11,15 @@ import { FormatearMoneda } from '@/Utilidades/Formatos';
 
 export const PantallaInicio = ({ navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaInicio'>): React.JSX.Element => {
   const { grupos, cuentasPorGrupo, moneda, InicializarDatos, ObtenerBalanceCuenta, EjecutarReglasPendientes, CrearGrupo, CrearCuenta } = UsarAlmacenAplicacion();
-  const [expansionPorGrupo, setExpansionPorGrupo] = useState<Record<string, boolean>>({});
+  const [expansionPorGrupo, setExpansionPorGrupo] = React.useState<Record<string, boolean>>({});
 
-  useEffect(() => {
+  React.useEffect(() => {
     InicializarDatos();
     EjecutarReglasPendientes();
   }, [InicializarDatos, EjecutarReglasPendientes]);
 
-  const cuentas = useMemo(() => Object.values(cuentasPorGrupo).flat(), [cuentasPorGrupo]);
-  const mapaBalances = useMemo(
+  const cuentas = React.useMemo(() => Object.values(cuentasPorGrupo).flat(), [cuentasPorGrupo]);
+  const mapaBalances = React.useMemo(
     () =>
       cuentas.reduce<Record<string, number>>((acumulado, cuenta) => {
         acumulado[cuenta.id] = ObtenerBalanceCuenta(cuenta.id);
