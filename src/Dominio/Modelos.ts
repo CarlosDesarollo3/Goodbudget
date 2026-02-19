@@ -24,7 +24,7 @@ export interface Grupo {
 export interface Cuenta {
   id: string;
   nombre: string;
-  idGrupoPadre: string;
+  idGrupoPadre: string | null;
   creadoEn: string;
 }
 

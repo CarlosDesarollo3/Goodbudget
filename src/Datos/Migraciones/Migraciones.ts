@@ -12,7 +12,7 @@ export const EjecutarMigraciones = (bd: SQLiteDatabase): void => {
     CREATE TABLE IF NOT EXISTS cuentas (
       id TEXT PRIMARY KEY NOT NULL,
       nombre TEXT NOT NULL,
-      idGrupoPadre TEXT NOT NULL,
+      idGrupoPadre TEXT,
       creadoEn TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS categorias (

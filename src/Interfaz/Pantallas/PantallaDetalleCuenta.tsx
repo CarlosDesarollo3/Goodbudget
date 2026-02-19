@@ -11,14 +11,26 @@ const repositorio = new RepositorioSqlite();
 
 export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaDetalleCuenta'>): React.JSX.Element => {
   const { idCuenta } = route.params;
-  const { ObtenerBalanceCuenta, moneda } = UsarAlmacenAplicacion();
+  const { ObtenerBalanceCuenta, moneda, ConvertirCuentaEnGrupo } = UsarAlmacenAplicacion();
   const transacciones = useMemo(() => repositorio.ListarTransaccionesPorCuenta(idCuenta), [idCuenta]);
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
+    <View style={{ flex: 1, padding: 16, gap: 10 }}>
       <Text variant="headlineSmall">Balance: {new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda }).format(ObtenerBalanceCuenta(idCuenta))}</Text>
       <Button mode="contained" onPress={() => navigation.navigate('PantallaFormularioTransaccion', { idCuentaPredeterminada: idCuenta })}>
         Añadir transacción
+      </Button>
+      <Button
+        mode="outlined"
+        onPress={() => {
+          const grupo = ConvertirCuentaEnGrupo(idCuenta);
+
+          if (grupo) {
+            navigation.replace('PantallaDetalleGrupo', { idGrupo: grupo.id, nombreGrupo: grupo.nombre });
+          }
+        }}
+      >
+        Convertir en grupo y crear subcuentas
       </Button>
       <ScrollView>
         {transacciones.map((transaccion) => (

@@ -18,9 +18,11 @@ export const PilaNavegacionPrincipal = (): React.JSX.Element => {
     <NavigationContainer>
       <Pila.Navigator
         screenOptions={({ navigation }) => ({
-          headerStyle: { backgroundColor: '#0C3A72' },
+          headerStyle: { backgroundColor: '#12355B' },
           headerTintColor: '#FFFFFF',
-          headerTitleStyle: { fontWeight: '600' },
+          headerTitleStyle: { fontWeight: '700' },
+          statusBarStyle: 'light',
+          statusBarColor: '#12355B',
           headerRight: () => <MenuCabecera navigation={navigation} />
         })}
       >

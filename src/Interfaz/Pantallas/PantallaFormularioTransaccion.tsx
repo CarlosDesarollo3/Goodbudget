@@ -8,7 +8,7 @@ import { formatISO } from 'date-fns';
 import { EsquemaTransaccionFormulario } from '@/Dominio/Esquemas';
 import { TipoTransaccion } from '@/Dominio/Modelos';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
-import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
+import { CLAVE_CUENTAS_RAIZ, UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 import { Transaccion } from '@/Dominio/Modelos';
 
 type ValoresFormulario = {
@@ -27,6 +27,10 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
   const cuentas = Object.values(cuentasPorGrupo).flat();
 
   const transaccionEditar = (route.params as any)?.transaccion as Transaccion | undefined;
+  const seccionesCuentas = [
+    { id: CLAVE_CUENTAS_RAIZ, nombre: 'Cuentas principales' },
+    ...grupos.map((grupo) => ({ id: grupo.id, nombre: grupo.nombre }))
+  ].filter((seccion) => (cuentasPorGrupo[seccion.id] ?? []).length > 0);
 
   const { control, handleSubmit, formState: { errors } } = useForm<ValoresFormulario>({
     resolver: zodResolver(EsquemaTransaccionFormulario),
@@ -95,13 +99,13 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
         grupos && Object.keys(cuentasPorGrupo).length > 0 ? (
           // agrupar por grupos mostrando botones por grupo
           <>
-            {grupos.map((grupo) => (
-              <React.Fragment key={grupo.id}>
-                <HelperText type="info">{grupo.nombre}</HelperText>
+            {seccionesCuentas.map((seccion) => (
+              <React.Fragment key={seccion.id}>
+                <HelperText type="info">{seccion.nombre}</HelperText>
                 <Controller control={control} name="idCuentaOrigen" render={({ field: { value, onChange } }) => (
                   <React.Fragment>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                      {(cuentasPorGrupo[grupo.id] ?? []).map(c => (
+                      {(cuentasPorGrupo[seccion.id] ?? []).map(c => (
                         <Button key={c.id} mode={value === c.id ? 'contained' : 'outlined'} onPress={() => onChange(c.id)}>{c.nombre}</Button>
                       ))}
                     </View>
@@ -126,12 +130,12 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
       {cuentas.length > 0 ? (
         grupos && Object.keys(cuentasPorGrupo).length > 0 ? (
           <>
-            {grupos.map((grupo) => (
-              <React.Fragment key={grupo.id}>
-                <HelperText type="info">{grupo.nombre}</HelperText>
+            {seccionesCuentas.map((seccion) => (
+              <React.Fragment key={seccion.id}>
+                <HelperText type="info">{seccion.nombre}</HelperText>
                 <Controller control={control} name="idCuentaDestino" render={({ field: { value, onChange } }) => (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    {(cuentasPorGrupo[grupo.id] ?? []).map(c => (
+                    {(cuentasPorGrupo[seccion.id] ?? []).map(c => (
                       <Button key={c.id} mode={value === c.id ? 'contained' : 'outlined'} onPress={() => onChange(c.id)}>{c.nombre}</Button>
                     ))}
                   </View>
