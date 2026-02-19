@@ -18,7 +18,10 @@ interface EstadoAplicacion {
   InicializarDatos(): void;
   CrearGrupo(nombre: string, idGrupoPadre: string | null): void;
   CrearCuenta(nombre: string, idGrupoPadre: string | null): void;
+  RenombrarGrupo(idGrupo: string, nombre: string): void;
+  RenombrarCuenta(idCuenta: string, nombre: string): void;
   ConvertirCuentaEnGrupo(idCuenta: string): Grupo | null;
+  EliminarGrupo(idGrupo: string): void;
   EliminarCuenta(idCuenta: string): void;
   RegistrarTransaccion(datos: Omit<Transaccion, 'id' | 'creadoEn'>): void;
   ActualizarTransaccion(transaccion: Transaccion): void;
@@ -71,6 +74,16 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     get().InicializarDatos();
   },
 
+  RenombrarGrupo: (idGrupo, nombre) => {
+    repositorio.ActualizarNombreGrupo(idGrupo, nombre);
+    get().InicializarDatos();
+  },
+
+  RenombrarCuenta: (idCuenta, nombre) => {
+    repositorio.ActualizarNombreCuenta(idCuenta, nombre);
+    get().InicializarDatos();
+  },
+
   ConvertirCuentaEnGrupo: (idCuenta) => {
     const cuenta = repositorio.ObtenerCuenta(idCuenta);
 
@@ -90,6 +103,11 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     get().InicializarDatos();
 
     return nuevoGrupo;
+  },
+
+  EliminarGrupo: (idGrupo) => {
+    repositorio.EliminarGrupo(idGrupo);
+    get().InicializarDatos();
   },
 
   EliminarCuenta: (idCuenta) => {
