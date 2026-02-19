@@ -68,7 +68,6 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
   return (
     <View style={styles.contenedor}>
       <Appbar.Header mode="small" elevated style={styles.header}>
-        <Appbar.Content title="Goodbudget" subtitle="Tu panorama financiero" />
         <Menu
           visible={menuVisible}
           onDismiss={() => setMenuVisible(false)}
@@ -87,11 +86,12 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
             navigation.navigate('PantallaConfiguracion');
           }} title="Configuración" leadingIcon="cog-outline" />
         </Menu>
+        <Appbar.Content title="Goodbudget" subtitle="Tu panorama financiero" />
       </Appbar.Header>
 
       <Surface style={styles.tarjetaTotal} elevation={1}>
         <Text variant="labelLarge" style={styles.textoSecundario}>Total general</Text>
-        <Text variant="headlineSmall">{FormatearMoneda(totalGeneral, moneda)}</Text>
+        <Text variant="headlineSmall" style={totalGeneral >= 0 ? styles.montoPositivo : styles.montoNegativo}>{FormatearMoneda(totalGeneral, moneda)}</Text>
       </Surface>
 
       <ScrollView contentContainerStyle={styles.listaContenedora}>
@@ -111,25 +111,34 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
 const styles = StyleSheet.create({
   contenedor: {
     flex: 1,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingBottom: 16
   },
   header: {
-    backgroundColor: 'transparent'
+    backgroundColor: 'transparent',
+    marginTop: 0,
+    marginBottom: 6
   },
   tarjetaTotal: {
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12
   },
   textoSecundario: {
-    opacity: 0.75
+    opacity: 0.75,
+    marginBottom: 4
+  },
+  montoPositivo: {
+    color: '#1F8F4C'
+  },
+  montoNegativo: {
+    color: '#C4362D'
   },
   listaContenedora: {
-    paddingBottom: 80
+    paddingBottom: 88
   },
   itemContenedor: {
-    marginBottom: 4
+    marginBottom: 6
   },
   fab: {
     position: 'absolute',

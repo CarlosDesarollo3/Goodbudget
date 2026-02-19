@@ -7,8 +7,14 @@ const tema = {
   ...MD3LightTheme,
   colors: {
     ...MD3LightTheme.colors,
-    primary: '#4A6FA5',
-    secondary: '#8AA1C1'
+    primary: '#1D6FD8',
+    onPrimary: '#FFFFFF',
+    primaryContainer: '#D9E9FF',
+    onPrimaryContainer: '#0D2B52',
+    secondary: '#3B7FBD',
+    secondaryContainer: '#DDEFFF',
+    tertiary: '#2F6EA9',
+    surfaceVariant: '#ECF3FB'
   }
 };
 
