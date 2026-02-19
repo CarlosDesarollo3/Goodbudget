@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Appbar, FAB, Menu, Surface, Text } from 'react-native-paper';
+import { FAB, Surface, Text } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { TarjetaGrupo } from '@/Interfaz/Componentes/TarjetaGrupo';
@@ -11,7 +11,6 @@ import { FormatearMoneda } from '@/Utilidades/Formatos';
 
 export const PantallaInicio = ({ navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaInicio'>): React.JSX.Element => {
   const { grupos, cuentasPorGrupo, moneda, InicializarDatos, ObtenerBalanceCuenta, EjecutarReglasPendientes } = UsarAlmacenAplicacion();
-  const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
     InicializarDatos();
@@ -67,28 +66,6 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
 
   return (
     <View style={styles.contenedor}>
-      <Appbar.Header mode="small" elevated style={styles.header}>
-        <Menu
-          visible={menuVisible}
-          onDismiss={() => setMenuVisible(false)}
-          anchor={<Appbar.Action icon="menu" onPress={() => setMenuVisible(true)} accessibilityLabel="Abrir menú" />}
-        >
-          <Menu.Item onPress={() => {
-            setMenuVisible(false);
-            navigation.navigate('PantallaCategorias');
-          }} title="Categorías" leadingIcon="shape-outline" />
-          <Menu.Item onPress={() => {
-            setMenuVisible(false);
-            navigation.navigate('PantallaReglasRecurrentes');
-          }} title="Reglas recurrentes" leadingIcon="calendar-sync" />
-          <Menu.Item onPress={() => {
-            setMenuVisible(false);
-            navigation.navigate('PantallaConfiguracion');
-          }} title="Configuración" leadingIcon="cog-outline" />
-        </Menu>
-        <Appbar.Content title="Goodbudget" subtitle="Tu panorama financiero" />
-      </Appbar.Header>
-
       <Surface style={styles.tarjetaTotal} elevation={1}>
         <Text variant="labelLarge" style={styles.textoSecundario}>Total general</Text>
         <Text variant="headlineSmall" style={totalGeneral >= 0 ? styles.montoPositivo : styles.montoNegativo}>{FormatearMoneda(totalGeneral, moneda)}</Text>
@@ -112,12 +89,8 @@ const styles = StyleSheet.create({
   contenedor: {
     flex: 1,
     paddingHorizontal: 14,
+    paddingTop: 10,
     paddingBottom: 16
-  },
-  header: {
-    backgroundColor: 'transparent',
-    marginTop: 0,
-    marginBottom: 6
   },
   tarjetaTotal: {
     borderRadius: 16,

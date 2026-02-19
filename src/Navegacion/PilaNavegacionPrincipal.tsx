@@ -9,13 +9,21 @@ import { PantallaFormularioTransaccion } from '@/Interfaz/Pantallas/PantallaForm
 import { PantallaCategorias } from '@/Interfaz/Pantallas/PantallaCategorias';
 import { PantallaReglasRecurrentes } from '@/Interfaz/Pantallas/PantallaReglasRecurrentes';
 import { PantallaConfiguracion } from '@/Interfaz/Pantallas/PantallaConfiguracion';
+import { MenuCabecera } from '@/Interfaz/Componentes/MenuCabecera';
 
 const Pila = createNativeStackNavigator<ParametrosNavegacion>();
 
 export const PilaNavegacionPrincipal = (): React.JSX.Element => {
   return (
     <NavigationContainer>
-      <Pila.Navigator>
+      <Pila.Navigator
+        screenOptions={({ navigation }) => ({
+          headerStyle: { backgroundColor: '#0C3A72' },
+          headerTintColor: '#FFFFFF',
+          headerTitleStyle: { fontWeight: '600' },
+          headerRight: () => <MenuCabecera navigation={navigation} />
+        })}
+      >
         <Pila.Screen name="PantallaInicio" component={PantallaInicio} options={{ title: 'Manejo de Sobres' }} />
         <Pila.Screen name="PantallaDetalleGrupo" component={PantallaDetalleGrupo} options={{ title: 'Detalle de Grupo' }} />
         <Pila.Screen name="PantallaDetalleCuenta" component={PantallaDetalleCuenta} options={{ title: 'Detalle de Cuenta' }} />
