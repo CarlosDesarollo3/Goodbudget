@@ -14,7 +14,7 @@ export const MenuCabecera = ({ navigation }: PropiedadesMenuCabecera): React.JSX
     <Menu
       visible={menuVisible}
       onDismiss={() => setMenuVisible(false)}
-      anchor={<Appbar.Action icon="menu" iconColor="#FFFFFF" onPress={() => setMenuVisible(true)} accessibilityLabel="Abrir menú" />}
+      anchor={<Appbar.Action icon="menu" iconColor="#000000" onPress={() => setMenuVisible(true)} accessibilityLabel="Abrir menú" />}
     >
       <Menu.Item
         onPress={() => {
