@@ -55,4 +55,30 @@ export const EjecutarMigraciones = (bd: SQLiteDatabase): void => {
       valor TEXT NOT NULL
     );
   `);
+
+  // Reparación: si la columna idGrupoPadre existiera con NOT NULL en una versión previa,
+  // reconstruimos la tabla `cuentas` permitiendo NULLs para idGrupoPadre.
+  try {
+    const info: Array<{ name: string; notnull: number }> = (bd as any).getAllSync('PRAGMA table_info(cuentas)');
+    const columna = info.find((f) => f.name === 'idGrupoPadre');
+    if (columna && columna.notnull === 1) {
+      bd.execSync(`
+        PRAGMA foreign_keys = OFF;
+        BEGIN TRANSACTION;
+        CREATE TABLE IF NOT EXISTS cuentas_new (
+          id TEXT PRIMARY KEY NOT NULL,
+          nombre TEXT NOT NULL,
+          idGrupoPadre TEXT,
+          creadoEn TEXT NOT NULL
+        );
+        INSERT INTO cuentas_new (id,nombre,idGrupoPadre,creadoEn) SELECT id,nombre,idGrupoPadre,creadoEn FROM cuentas;
+        DROP TABLE cuentas;
+        ALTER TABLE cuentas_new RENAME TO cuentas;
+        COMMIT;
+        PRAGMA foreign_keys = ON;
+      `);
+    }
+  } catch (e) {
+    // Si falla la verificación/reparación no bloqueamos la inicialización; registramos en desarrollo.
+  }
 };

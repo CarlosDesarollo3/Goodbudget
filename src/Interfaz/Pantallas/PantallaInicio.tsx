@@ -6,6 +6,7 @@ import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { TarjetaGrupo } from '@/Interfaz/Componentes/TarjetaGrupo';
 import { TarjetaCuenta } from '@/Interfaz/Componentes/TarjetaCuenta';
 import { FilaDeslizableAcciones } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
+import { CerrarFilaAbierta } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
 import { CLAVE_CUENTAS_RAIZ, UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 import { CalcularTotalesGrupoRecursivo } from '@/Servicios/MotorBalances';
 import { FormatearMoneda } from '@/Utilidades/Formatos';
@@ -148,12 +149,13 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     const contenidoExpandido = expandido
       ? [
           ...cuentasGrupo.map((cuenta) => (
-            <View key={`cuenta-${cuenta.id}`} style={[styles.itemContenedor, { marginLeft: (nivel + 1) * 10 }]}>
-              <FilaDeslizableAcciones
-                onEditar={() => abrirDialogoRenombrar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
-                onEliminar={() => setNodoEliminar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
-                onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
-              >
+            <View key={`cuenta-${cuenta.id}`} style={[styles.itemContenedor, { marginLeft: (nivel + 1) * 10 }]}> 
+                <FilaDeslizableAcciones
+                  id={cuenta.id}
+                  onEditar={() => abrirDialogoRenombrar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
+                  onEliminar={() => setNodoEliminar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
+                  onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
+                >
                 <TarjetaCuenta
                   nombre={cuenta.nombre}
                   balance={ObtenerBalanceCuenta(cuenta.id)}
@@ -168,8 +170,9 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
       : [];
 
     return [
-      <View key={`grupo-${grupo.id}`} style={[styles.itemContenedor, { marginLeft: nivel * 10 }]}>
+      <View key={`grupo-${grupo.id}`} style={[styles.itemContenedor, { marginLeft: nivel * 10 }]}> 
         <FilaDeslizableAcciones
+          id={grupo.id}
           onEditar={() => abrirDialogoRenombrar({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
           onEliminar={() => setNodoEliminar({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
           onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
@@ -197,7 +200,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
         <Text variant="headlineSmall" style={totalGeneral >= 0 ? styles.montoPositivo : styles.montoNegativo}>{FormatearMoneda(totalGeneral, moneda)}</Text>
       </Surface>
 
-      <ScrollView contentContainerStyle={styles.listaContenedora}>
+      <ScrollView contentContainerStyle={styles.listaContenedora} onStartShouldSetResponder={() => { CerrarFilaAbierta(); return false; }}>
         {cuentasRaiz.map((cuenta) => (
           <View key={`cuenta-raiz-${cuenta.id}`} style={styles.itemContenedor}>
             <FilaDeslizableAcciones

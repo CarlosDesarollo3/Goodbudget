@@ -5,7 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { TarjetaCuenta } from '@/Interfaz/Componentes/TarjetaCuenta';
 import { TarjetaGrupo } from '@/Interfaz/Componentes/TarjetaGrupo';
-import { FilaDeslizableAcciones } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
+import { FilaDeslizableAcciones, CerrarFilaAbierta } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 
 type TipoNodo = 'grupo' | 'cuenta';
@@ -110,10 +110,11 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
 
   return (
     <View style={styles.contenedor}>
-      <ScrollView contentContainerStyle={styles.contenido}>
+      <ScrollView contentContainerStyle={styles.contenido} onStartShouldSetResponder={() => { CerrarFilaAbierta(); return false; }}>
         {subgrupos.map((grupo) => (
           <FilaDeslizableAcciones
             key={grupo.id}
+            id={grupo.id}
             onEditar={() => abrirDialogoRenombrar({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
             onEliminar={() => setNodoEliminar({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
             onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
@@ -130,6 +131,7 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
         {cuentas.map((cuenta) => (
           <FilaDeslizableAcciones
             key={cuenta.id}
+            id={cuenta.id}
             onEditar={() => abrirDialogoRenombrar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
             onEliminar={() => setNodoEliminar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
             onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}

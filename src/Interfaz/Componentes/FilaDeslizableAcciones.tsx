@@ -1,58 +1,122 @@
-import React, { useMemo, useRef } from 'react';
-import { Animated, PanResponder, StyleSheet, View } from 'react-native';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { Animated, PanResponder, StyleSheet, View, Pressable } from 'react-native';
 import { Text } from 'react-native-paper';
 
-const DESPLAZAMIENTO_MAXIMO = 104;
-const UMBRAL_DISTANCIA = 52;
-const UMBRAL_VELOCIDAD = 0.35;
+const DESPLAZAMIENTO_MAXIMO = 100;
+const UMBRAL_DISTANCIA = 10;
 
 interface PropsFilaDeslizableAcciones {
+  id?: string;
   children: React.ReactNode;
   onEditar: () => void;
   onEliminar: () => void;
-  onDeslizamientoInsuficiente?: () => void;
+  onDeslizamientoInsuficiente?: ()   => void;
 }
 
+// Mecanismo simple para mantener una sola fila abierta
+let filaAbiertaId: string | null = null;
+const subs = new Set<(id: string | null) => void>();
+const publicarFilaAbierta = (id: string | null) => {
+  filaAbiertaId = id;
+  subs.forEach((s) => s(id));
+};
+const suscribirse = (fn: (id: string | null) => void) => {
+  subs.add(fn);
+  return () => subs.delete(fn);
+};
+
 export const FilaDeslizableAcciones = ({
+  id,
   children,
   onEditar,
   onEliminar,
   onDeslizamientoInsuficiente
 }: PropsFilaDeslizableAcciones): React.JSX.Element => {
   const traslacionX = useRef(new Animated.Value(0)).current;
+  const offsetRef = useRef(0);
+  const [ladoAbierto, setLadoAbierto] = useState<'izquierda' | 'derecha' | null>(null);
 
-  const resetearPosicion = (): void => {
+  useEffect(() => {
+    const unsub = suscribirse((filaId) => {
+      // si otra fila abre, cerrarnos
+      if (filaId && filaId !== id) {
+        resetearPosicion();
+      }
+    });
+    return unsub;
+  }, [id]);
+
+  const resetearPosicion = (velocidad = 0): void => {
     Animated.spring(traslacionX, {
       toValue: 0,
       useNativeDriver: true,
-      speed: 22,
-      bounciness: 0
-    }).start();
+      damping: 18,
+      stiffness: 200,
+      mass: 1
+    }).start(() => {
+      offsetRef.current = 0;
+      traslacionX.setValue(0);
+      setLadoAbierto(null);
+      // anunciar cierre
+      publicarFilaAbierta(null);
+    });
   };
 
   const panResponder = useMemo(
     () => PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 6,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        const dx = gestureState.dx ?? 0;
+        const dy = gestureState.dy ?? 0;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+        // Permitir el gesto cuando el movimiento horizontal es notable y domina,
+        // o cuando el desplazamiento horizontal es suficientemente grande (más tolerante al scroll).
+        return (absDx > 5 && absDx > absDy * 0.5) || absDx > 10;
+      },
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        const dx = gestureState.dx ?? 0;
+        const dy = gestureState.dy ?? 0;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+        return (absDx > 6 && absDx > absDy * 0.6) || absDx > 20;
+      },
       onPanResponderGrant: () => {
-        traslacionX.stopAnimation();
+        traslacionX.stopAnimation((valorActual: number) => {
+          offsetRef.current = valorActual ?? 0;
+          traslacionX.setValue(0);
+        });
       },
       onPanResponderMove: (_, gestureState) => {
-        const dxLimitado = Math.max(-DESPLAZAMIENTO_MAXIMO, Math.min(DESPLAZAMIENTO_MAXIMO, gestureState.dx));
+        const dxTotal = offsetRef.current + gestureState.dx;
+        const dxLimitado = Math.max(-DESPLAZAMIENTO_MAXIMO, Math.min(DESPLAZAMIENTO_MAXIMO, dxTotal));
         traslacionX.setValue(dxLimitado);
       },
       onPanResponderRelease: (_, gestureState) => {
-        const gestoDerecha = gestureState.dx >= UMBRAL_DISTANCIA || gestureState.vx >= UMBRAL_VELOCIDAD;
-        const gestoIzquierda = gestureState.dx <= -UMBRAL_DISTANCIA || gestureState.vx <= -UMBRAL_VELOCIDAD;
+        const dx = offsetRef.current + gestureState.dx;
+        // Confirmación basada sólo en distancia mínima, no en velocidad
+        const gestoDerecha = dx >= UMBRAL_DISTANCIA;
+        const gestoIzquierda = dx <= -UMBRAL_DISTANCIA;
 
         if (gestoDerecha) {
-          onEditar();
+          // abrir hacia la derecha y dejar fijo hasta confirmación
+          Animated.spring(traslacionX, { toValue: DESPLAZAMIENTO_MAXIMO, useNativeDriver: true, damping: 12, stiffness: 220 }).start(() => {
+            offsetRef.current = DESPLAZAMIENTO_MAXIMO;
+            setLadoAbierto('derecha');
+            // anunciar que esta fila quedó abierta
+            publicarFilaAbierta(id ?? null);
+          });
         } else if (gestoIzquierda) {
-          onEliminar();
-        } else if (Math.abs(gestureState.dx) > 20) {
-          onDeslizamientoInsuficiente?.();
+          Animated.spring(traslacionX, { toValue: -DESPLAZAMIENTO_MAXIMO, useNativeDriver: true, damping: 12, stiffness: 220 }).start(() => {
+            offsetRef.current = -DESPLAZAMIENTO_MAXIMO;
+            setLadoAbierto('izquierda');
+            publicarFilaAbierta(id ?? null);
+          });
+        } else {
+          if (Math.abs(dx) > 40) {
+            onDeslizamientoInsuficiente?.();
+          }
+          resetearPosicion();
         }
-
-        resetearPosicion();
       },
       onPanResponderTerminate: () => {
         resetearPosicion();
@@ -74,27 +138,31 @@ export const FilaDeslizableAcciones = ({
     extrapolate: 'clamp'
   });
 
-  const anchoEditar = traslacionX.interpolate({
+  const scaleEditar = traslacionX.interpolate({
     inputRange: [0, DESPLAZAMIENTO_MAXIMO],
-    outputRange: [0, DESPLAZAMIENTO_MAXIMO],
+    outputRange: [0, 1],
     extrapolate: 'clamp'
   });
 
-  const anchoEliminar = traslacionX.interpolate({
+  const scaleEliminar = traslacionX.interpolate({
     inputRange: [-DESPLAZAMIENTO_MAXIMO, 0],
-    outputRange: [DESPLAZAMIENTO_MAXIMO, 0],
+    outputRange: [1, 0],
     extrapolate: 'clamp'
   });
 
   return (
     <View style={styles.filaDeslizableContenedor}>
-      <View style={styles.fondoAcciones}>
-        <Animated.View style={[styles.accion, styles.accionEditar, { width: anchoEditar, opacity: opacidadEditar }]}>
-          <Text style={styles.textoAccion}>Renombrar</Text>
-        </Animated.View>
-        <Animated.View style={[styles.accion, styles.accionEliminar, { width: anchoEliminar, opacity: opacidadEliminar }]}>
-          <Text style={styles.textoAccion}>Eliminar</Text>
-        </Animated.View>
+      <View style={styles.fondoAcciones} pointerEvents="box-none">
+        <Pressable onPress={() => { if (ladoAbierto === 'derecha') { onEditar(); resetearPosicion(); } }} style={{ position: 'absolute', left: 0, top: 0, bottom: 0 }}>
+          <Animated.View style={[styles.accion, styles.accionEditar, { width: DESPLAZAMIENTO_MAXIMO, transform: [{ scaleX: scaleEditar }], opacity: opacidadEditar, height: '100%' }]}>
+            <Text style={styles.textoAccion}>Renombrar</Text>
+          </Animated.View>
+        </Pressable>
+        <Pressable onPress={() => { if (ladoAbierto === 'izquierda') { onEliminar(); resetearPosicion(); } }} style={{ position: 'absolute', right: 0, top: 0, bottom: 0 }}>
+          <Animated.View style={[styles.accion, styles.accionEliminar, { width: DESPLAZAMIENTO_MAXIMO, transform: [{ scaleX: scaleEliminar }], opacity: opacidadEliminar, height: '100%' }]}>
+            <Text style={styles.textoAccion}>Eliminar</Text>
+          </Animated.View>
+        </Pressable>
       </View>
 
       <Animated.View
@@ -103,6 +171,16 @@ export const FilaDeslizableAcciones = ({
       >
         {children}
       </Animated.View>
+
+      {ladoAbierto && (
+        <Pressable
+          style={[styles.overlayCerrar, { left: DESPLAZAMIENTO_MAXIMO, right: DESPLAZAMIENTO_MAXIMO }]}
+          onPress={() => {
+            setLadoAbierto(null);
+            resetearPosicion();
+          }}
+        />
+      )}
     </View>
   );
 };
@@ -136,5 +214,11 @@ const styles = StyleSheet.create({
   },
   contenidoDeslizable: {
     backgroundColor: 'transparent'
+  }
+  ,
+  overlayCerrar: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0
   }
 });

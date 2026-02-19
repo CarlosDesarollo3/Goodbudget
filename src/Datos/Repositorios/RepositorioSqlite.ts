@@ -1,5 +1,5 @@
 import { Categoria, Cuenta, Grupo, ReglaRecurrente, Transaccion } from '@/Dominio/Modelos';
-import { ErrorDatos } from '@/Utilidades/Errores';
+import { ErrorDatos, RegistrarLogDesarrollo } from '@/Utilidades/Errores';
 import { ObtenerBd } from '../Bd/ConexionBd';
 import {
   RepositorioCategorias,
@@ -58,6 +58,7 @@ export class RepositorioSqlite
         cuenta.creadoEn
       ]);
     } catch (error) {
+      RegistrarLogDesarrollo('Error al crear cuenta en RepositorioSqlite', error);
       throw new ErrorDatos('No se pudo crear la cuenta', error);
     }
   }
