@@ -24,8 +24,12 @@ export class RepositorioSqlite
     }
   }
 
-  ListarCuentasPorGrupo(idGrupoPadre: string): Cuenta[] {
+  ListarCuentasPorGrupo(idGrupoPadre: string | null): Cuenta[] {
     try {
+      if (idGrupoPadre === null) {
+        return this.bd.getAllSync<Cuenta>('SELECT * FROM cuentas WHERE idGrupoPadre IS NULL ORDER BY nombre');
+      }
+
       return this.bd.getAllSync<Cuenta>('SELECT * FROM cuentas WHERE idGrupoPadre = ? ORDER BY nombre', [idGrupoPadre]);
     } catch (error) {
       throw new ErrorDatos('No se pudieron listar las cuentas', error);
@@ -119,6 +123,14 @@ export class RepositorioSqlite
 
   EliminarCategoria(idCategoria: string): void {
     this.bd.runSync('DELETE FROM categorias WHERE id = ?', [idCategoria]);
+  }
+
+  ObtenerCuenta(idCuenta: string): Cuenta | null {
+    return this.bd.getFirstSync<Cuenta>('SELECT * FROM cuentas WHERE id = ?', [idCuenta]) ?? null;
+  }
+
+  ActualizarCuentaPadre(idCuenta: string, idGrupoPadre: string | null): void {
+    this.bd.runSync('UPDATE cuentas SET idGrupoPadre = ? WHERE id = ?', [idGrupoPadre, idCuenta]);
   }
 
   EliminarCuenta(idCuenta: string): void {

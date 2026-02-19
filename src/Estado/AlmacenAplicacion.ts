@@ -17,7 +17,8 @@ interface EstadoAplicacion {
   errorUi?: string;
   InicializarDatos(): void;
   CrearGrupo(nombre: string, idGrupoPadre: string | null): void;
-  CrearCuenta(nombre: string, idGrupoPadre: string): void;
+  CrearCuenta(nombre: string, idGrupoPadre: string | null): void;
+  ConvertirCuentaEnGrupo(idCuenta: string): Grupo | null;
   EliminarCuenta(idCuenta: string): void;
   RegistrarTransaccion(datos: Omit<Transaccion, 'id' | 'creadoEn'>): void;
   ActualizarTransaccion(transaccion: Transaccion): void;
@@ -28,6 +29,8 @@ interface EstadoAplicacion {
   GuardarMoneda(moneda: string): void;
   ObtenerBalanceCuenta(idCuenta: string): number;
 }
+
+export const CLAVE_CUENTAS_RAIZ = '__RAIZ__';
 
 const repositorio = new RepositorioSqlite();
 const motorRecurrencias = new MotorRecurrencias(repositorio, repositorio);
@@ -47,6 +50,8 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
       acumulado[grupo.id] = repositorio.ListarCuentasPorGrupo(grupo.id);
       return acumulado;
     }, {});
+    cuentasPorGrupo[CLAVE_CUENTAS_RAIZ] = repositorio.ListarCuentasPorGrupo(null);
+
     const categorias = repositorio.ListarCategorias();
     const reglas = repositorio.ListarReglas();
     const moneda = repositorio.ObtenerMoneda();
@@ -64,6 +69,27 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     const nuevaCuenta: Cuenta = { id: GenerarUuid(), nombre, idGrupoPadre, creadoEn: formatISO(new Date()) };
     repositorio.CrearCuenta(nuevaCuenta);
     get().InicializarDatos();
+  },
+
+  ConvertirCuentaEnGrupo: (idCuenta) => {
+    const cuenta = repositorio.ObtenerCuenta(idCuenta);
+
+    if (!cuenta) {
+      return null;
+    }
+
+    const nuevoGrupo: Grupo = {
+      id: GenerarUuid(),
+      nombre: cuenta.nombre,
+      idGrupoPadre: cuenta.idGrupoPadre,
+      creadoEn: formatISO(new Date())
+    };
+
+    repositorio.CrearGrupo(nuevoGrupo);
+    repositorio.ActualizarCuentaPadre(cuenta.id, nuevoGrupo.id);
+    get().InicializarDatos();
+
+    return nuevoGrupo;
   },
 
   EliminarCuenta: (idCuenta) => {

@@ -2,9 +2,11 @@ import { Categoria, Cuenta, Grupo, ReglaRecurrente, Transaccion } from '@/Domini
 
 export interface RepositorioSobres {
   ListarGrupos(): Grupo[];
-  ListarCuentasPorGrupo(idGrupoPadre: string): Cuenta[];
+  ListarCuentasPorGrupo(idGrupoPadre: string | null): Cuenta[];
   CrearGrupo(grupo: Grupo): void;
   CrearCuenta(cuenta: Cuenta): void;
+  ObtenerCuenta(idCuenta: string): Cuenta | null;
+  ActualizarCuentaPadre(idCuenta: string, idGrupoPadre: string | null): void;
   EliminarCuenta(idCuenta: string): void;
 }
 
