@@ -1,13 +1,12 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { Animated, PanResponder, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Dialog, Portal, Text, TextInput } from 'react-native-paper';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Button, Dialog, Portal, Snackbar, Text, TextInput } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { TarjetaCuenta } from '@/Interfaz/Componentes/TarjetaCuenta';
 import { TarjetaGrupo } from '@/Interfaz/Componentes/TarjetaGrupo';
+import { FilaDeslizableAcciones } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
-
-const DESPLAZAMIENTO_ACCION = 84;
 
 type TipoNodo = 'grupo' | 'cuenta';
 
@@ -16,60 +15,6 @@ interface NodoSeleccionado {
   nombre: string;
   tipo: TipoNodo;
 }
-
-interface FilaDeslizableProps {
-  children: React.ReactNode;
-  onEditar: () => void;
-  onEliminar: () => void;
-}
-
-const FilaDeslizable = ({ children, onEditar, onEliminar }: FilaDeslizableProps): React.JSX.Element => {
-  const traslacionX = useRef(new Animated.Value(0)).current;
-
-  const panResponder = useMemo(
-    () => PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 8,
-      onPanResponderMove: (_, gestureState) => {
-        const dxLimitado = Math.max(-DESPLAZAMIENTO_ACCION, Math.min(DESPLAZAMIENTO_ACCION, gestureState.dx));
-        traslacionX.setValue(dxLimitado);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx > DESPLAZAMIENTO_ACCION / 2) {
-          onEditar();
-        } else if (gestureState.dx < -DESPLAZAMIENTO_ACCION / 2) {
-          onEliminar();
-        }
-
-        Animated.spring(traslacionX, {
-          toValue: 0,
-          useNativeDriver: true,
-          bounciness: 0
-        }).start();
-      }
-    }),
-    [onEditar, onEliminar, traslacionX]
-  );
-
-  return (
-    <View style={styles.filaDeslizableContenedor}>
-      <View style={styles.fondoAcciones}>
-        <View style={[styles.accion, styles.accionEditar]}>
-          <Text style={styles.textoAccion}>Renombrar</Text>
-        </View>
-        <View style={[styles.accion, styles.accionEliminar]}>
-          <Text style={styles.textoAccion}>Eliminar</Text>
-        </View>
-      </View>
-
-      <Animated.View
-        style={[styles.contenidoDeslizable, { transform: [{ translateX: traslacionX }] }]}
-        {...panResponder.panHandlers}
-      >
-        {children}
-      </Animated.View>
-    </View>
-  );
-};
 
 export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaDetalleGrupo'>): React.JSX.Element => {
   const { idGrupo } = route.params;
@@ -91,6 +36,7 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
   const [nodoRenombrar, setNodoRenombrar] = useState<NodoSeleccionado | null>(null);
   const [nodoEliminar, setNodoEliminar] = useState<NodoSeleccionado | null>(null);
   const [nombreTemporal, setNombreTemporal] = useState('');
+  const [mostrarAvisoGesto, setMostrarAvisoGesto] = useState(false);
 
   const abrirDialogoRenombrar = (nodo: NodoSeleccionado): void => {
     setNodoRenombrar(nodo);
@@ -135,10 +81,11 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
     <View style={styles.contenedor}>
       <ScrollView contentContainerStyle={styles.contenido}>
         {subgrupos.map((grupo) => (
-          <FilaDeslizable
+          <FilaDeslizableAcciones
             key={grupo.id}
             onEditar={() => abrirDialogoRenombrar({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
             onEliminar={() => setNodoEliminar({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
+            onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
           >
             <TarjetaGrupo
               nombre={grupo.nombre}
@@ -146,14 +93,15 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
               moneda={moneda}
               AlPresionar={() => navigation.push('PantallaDetalleGrupo', { idGrupo: grupo.id, nombreGrupo: grupo.nombre })}
             />
-          </FilaDeslizable>
+          </FilaDeslizableAcciones>
         ))}
 
         {cuentas.map((cuenta) => (
-          <FilaDeslizable
+          <FilaDeslizableAcciones
             key={cuenta.id}
             onEditar={() => abrirDialogoRenombrar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
             onEliminar={() => setNodoEliminar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
+            onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
           >
             <TarjetaCuenta
               nombre={cuenta.nombre}
@@ -161,7 +109,7 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
               moneda={moneda}
               AlPresionar={() => navigation.navigate('PantallaDetalleCuenta', { idCuenta: cuenta.id, nombreCuenta: cuenta.nombre })}
             />
-          </FilaDeslizable>
+          </FilaDeslizableAcciones>
         ))}
       </ScrollView>
 
@@ -193,6 +141,10 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      <Snackbar visible={mostrarAvisoGesto} onDismiss={() => setMostrarAvisoGesto(false)} duration={1800}>
+        Completa el gesto para activar la acción
+      </Snackbar>
     </View>
   );
 };
@@ -205,35 +157,6 @@ const styles = StyleSheet.create({
   contenido: {
     paddingBottom: 88,
     gap: 8
-  },
-  filaDeslizableContenedor: {
-    overflow: 'hidden',
-    borderRadius: 12
-  },
-  fondoAcciones: {
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: 'row',
-    justifyContent: 'space-between'
-  },
-  accion: {
-    width: DESPLAZAMIENTO_ACCION,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  accionEditar: {
-    backgroundColor: '#1976D2'
-  },
-  accionEliminar: {
-    backgroundColor: '#C62828'
-  },
-  textoAccion: {
-    color: 'white',
-    fontWeight: '700',
-    fontSize: 12,
-    textTransform: 'uppercase'
-  },
-  contenidoDeslizable: {
-    backgroundColor: 'transparent'
   },
   accionesInferiores: {
     position: 'absolute',
