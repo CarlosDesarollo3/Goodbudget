@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, FAB, Surface, Text } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
