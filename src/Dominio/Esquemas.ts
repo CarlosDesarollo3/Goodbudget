@@ -14,6 +14,14 @@ export const EsquemaTransaccionFormulario = z
     fecha: z.string().min(1, 'La fecha es obligatoria')
   })
   .superRefine((valor, contexto) => {
+    if ((valor.tipo === TipoTransaccion.GASTO || valor.tipo === TipoTransaccion.INGRESO) && !valor.idCuentaOrigen) {
+      contexto.addIssue({ code: z.ZodIssueCode.custom, message: 'Debe indicar la cuenta origen' });
+    }
+
+    if (valor.tipo === TipoTransaccion.AJUSTE && !valor.idCuentaDestino) {
+      contexto.addIssue({ code: z.ZodIssueCode.custom, message: 'Debe indicar la cuenta destino del ajuste' });
+    }
+
     if (valor.tipo === TipoTransaccion.TRANSFERENCIA) {
       if (!valor.idCuentaOrigen || !valor.idCuentaDestino) {
         contexto.addIssue({ code: z.ZodIssueCode.custom, message: 'Debe indicar cuenta origen y destino' });

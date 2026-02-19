@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Surface, Text } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 import { FilaTransaccion } from '@/Interfaz/Componentes/FilaTransaccion';
@@ -12,7 +13,14 @@ const repositorio = new RepositorioSqlite();
 export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaDetalleCuenta'>): React.JSX.Element => {
   const { idCuenta } = route.params;
   const { ObtenerBalanceCuenta, moneda, ConvertirCuentaEnGrupo } = UsarAlmacenAplicacion();
-  const transacciones = useMemo(() => repositorio.ListarTransaccionesPorCuenta(idCuenta), [idCuenta]);
+  const [transacciones, setTransacciones] = React.useState(() => repositorio.ListarTransaccionesPorCuenta(idCuenta));
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setTransacciones(repositorio.ListarTransaccionesPorCuenta(idCuenta));
+    }, [idCuenta])
+  );
+
   const balanceCuenta = ObtenerBalanceCuenta(idCuenta);
 
   return (
