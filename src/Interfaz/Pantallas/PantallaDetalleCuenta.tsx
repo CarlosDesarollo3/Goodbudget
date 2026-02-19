@@ -22,7 +22,17 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
       </Button>
       <ScrollView>
         {transacciones.map((transaccion) => (
-          <FilaTransaccion key={transaccion.id} transaccion={transaccion} moneda={moneda} />
+          <FilaTransaccion
+            key={transaccion.id}
+            transaccion={transaccion}
+            moneda={moneda}
+            onPress={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
+            onEdit={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
+            onDelete={() => {
+              const { EliminarTransaccion } = UsarAlmacenAplicacion.getState();
+              EliminarTransaccion(transaccion.id);
+            }}
+          />
         ))}
       </ScrollView>
     </View>

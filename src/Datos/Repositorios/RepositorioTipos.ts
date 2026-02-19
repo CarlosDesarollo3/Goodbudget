@@ -5,12 +5,15 @@ export interface RepositorioSobres {
   ListarCuentasPorGrupo(idGrupoPadre: string): Cuenta[];
   CrearGrupo(grupo: Grupo): void;
   CrearCuenta(cuenta: Cuenta): void;
+  EliminarCuenta(idCuenta: string): void;
 }
 
 export interface RepositorioTransacciones {
   CrearTransaccion(transaccion: Transaccion): void;
   ListarTransaccionesPorCuenta(idCuenta: string): Transaccion[];
   ExisteReferenciaIdempotencia(referenciaIdempotencia: string): boolean;
+  ActualizarTransaccion(transaccion: Transaccion): void;
+  EliminarTransaccion(idTransaccion: string): void;
 }
 
 export interface RepositorioCategorias {
