@@ -327,10 +327,12 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
 
       <ScrollView
         contentContainerStyle={styles.listaContenedora}
+        scrollEnabled={!nodoArrastrado}
         onStartShouldSetResponder={() => {
           CerrarFilaAbierta();
           return false;
         }}
+        onMoveShouldSetResponderCapture={() => Boolean(nodoArrastrado)}
         onScroll={(evento) => {
           scrollActualRef.current = evento.nativeEvent.contentOffset.y;
         }}
