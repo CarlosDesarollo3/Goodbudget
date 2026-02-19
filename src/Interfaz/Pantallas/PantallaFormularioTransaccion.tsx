@@ -23,13 +23,15 @@ type ValoresFormulario = {
 export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaFormularioTransaccion'>): React.JSX.Element => {
   const idCuentaPredeterminada = route.params?.idCuentaPredeterminada;
   const { categorias, cuentasPorGrupo, grupos, RegistrarTransaccion, ActualizarTransaccion } = UsarAlmacenAplicacion();
-  const cuentas = Object.values(cuentasPorGrupo).flat();
+  const cuentas = React.useMemo(() => Object.values(cuentasPorGrupo).flat(), [cuentasPorGrupo]);
 
   const transaccionEditar = (route.params as { transaccion?: Transaccion } | undefined)?.transaccion;
-  const seccionesCuentas = [
-    { id: CLAVE_CUENTAS_RAIZ, nombre: 'Cuentas principales' },
-    ...grupos.map((grupo) => ({ id: grupo.id, nombre: grupo.nombre }))
-  ].filter((seccion) => (cuentasPorGrupo[seccion.id] ?? []).length > 0);
+  const seccionesCuentas = React.useMemo(() => (
+    [
+      { id: CLAVE_CUENTAS_RAIZ, nombre: 'Cuentas principales' },
+      ...grupos.map((grupo) => ({ id: grupo.id, nombre: grupo.nombre }))
+    ].filter((seccion) => (cuentasPorGrupo[seccion.id] ?? []).length > 0)
+  ), [cuentasPorGrupo, grupos]);
 
   const { control, handleSubmit, setValue, formState: { errors } } = useForm<ValoresFormulario>({
     resolver: zodResolver(EsquemaTransaccionFormulario),
@@ -70,11 +72,15 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
 
     if (tipoSeleccionado === TipoTransaccion.TRANSFERENCIA) {
       const origenSugerido = cuentaOrigenSeleccionada ?? idCuentaPredeterminada ?? cuentas[0]?.id;
-      setValue('idCuentaOrigen', origenSugerido, { shouldValidate: true });
+      if (cuentaOrigenSeleccionada !== origenSugerido) {
+        setValue('idCuentaOrigen', origenSugerido, { shouldValidate: true });
+      }
 
       if (!cuentaDestinoSeleccionada || cuentaDestinoSeleccionada === origenSugerido) {
         const destinoSugerido = cuentas.find((cuenta) => cuenta.id !== origenSugerido)?.id;
-        setValue('idCuentaDestino', destinoSugerido, { shouldValidate: true });
+        if (cuentaDestinoSeleccionada !== destinoSugerido) {
+          setValue('idCuentaDestino', destinoSugerido, { shouldValidate: true });
+        }
       }
       return;
     }
