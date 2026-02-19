@@ -18,7 +18,10 @@ interface EstadoAplicacion {
   InicializarDatos(): void;
   CrearGrupo(nombre: string, idGrupoPadre: string | null): void;
   CrearCuenta(nombre: string, idGrupoPadre: string): void;
+  EliminarCuenta(idCuenta: string): void;
   RegistrarTransaccion(datos: Omit<Transaccion, 'id' | 'creadoEn'>): void;
+  ActualizarTransaccion(transaccion: Transaccion): void;
+  EliminarTransaccion(idTransaccion: string): void;
   CrearCategoria(nombre: string, color?: string): void;
   CrearReglaRecurrente(regla: Omit<ReglaRecurrente, 'id' | 'frecuencia' | 'creadoEn'>): void;
   EjecutarReglasPendientes(): number;
@@ -63,9 +66,24 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     get().InicializarDatos();
   },
 
+  EliminarCuenta: (idCuenta) => {
+    repositorio.EliminarCuenta(idCuenta);
+    get().InicializarDatos();
+  },
+
   RegistrarTransaccion: (datos) => {
     const transaccion: Transaccion = { ...datos, id: GenerarUuid(), creadoEn: formatISO(new Date()) };
     repositorio.CrearTransaccion(transaccion);
+    get().InicializarDatos();
+  },
+
+  ActualizarTransaccion: (transaccion) => {
+    repositorio.ActualizarTransaccion(transaccion);
+    get().InicializarDatos();
+  },
+
+  EliminarTransaccion: (idTransaccion) => {
+    repositorio.EliminarTransaccion(idTransaccion);
     get().InicializarDatos();
   },
 

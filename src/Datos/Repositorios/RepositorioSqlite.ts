@@ -121,6 +121,46 @@ export class RepositorioSqlite
     this.bd.runSync('DELETE FROM categorias WHERE id = ?', [idCategoria]);
   }
 
+  EliminarCuenta(idCuenta: string): void {
+    try {
+      // borrar transacciones relacionadas primero
+      this.bd.runSync('DELETE FROM transacciones WHERE idCuentaOrigen = ? OR idCuentaDestino = ?', [idCuenta, idCuenta]);
+      this.bd.runSync('DELETE FROM cuentas WHERE id = ?', [idCuenta]);
+    } catch (error) {
+      throw new ErrorDatos('No se pudo eliminar la cuenta', error);
+    }
+  }
+
+  ActualizarTransaccion(transaccion: Transaccion): void {
+    try {
+      this.bd.runSync(
+        `UPDATE transacciones
+         SET tipo = ?, monto = ?, idCuentaOrigen = ?, idCuentaDestino = ?, idCategoria = ?, nota = ?, fecha = ?
+         WHERE id = ?`,
+        [
+          transaccion.tipo,
+          transaccion.monto,
+          transaccion.idCuentaOrigen,
+          transaccion.idCuentaDestino,
+          transaccion.idCategoria,
+          transaccion.nota,
+          transaccion.fecha,
+          transaccion.id
+        ]
+      );
+    } catch (error) {
+      throw new ErrorDatos('No se pudo actualizar la transacción', error);
+    }
+  }
+
+  EliminarTransaccion(idTransaccion: string): void {
+    try {
+      this.bd.runSync('DELETE FROM transacciones WHERE id = ?', [idTransaccion]);
+    } catch (error) {
+      throw new ErrorDatos('No se pudo eliminar la transacción', error);
+    }
+  }
+
   ListarReglas(): ReglaRecurrente[] {
     const filas = this.bd.getAllSync<(Omit<ReglaRecurrente, 'habilitada'> & { habilitada: number })>(
       'SELECT * FROM reglasRecurrentes ORDER BY creadoEn DESC'

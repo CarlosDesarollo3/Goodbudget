@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, View } from 'react-native';
-import { Button } from 'react-native-paper';
+import { Button, IconButton } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { TarjetaCuenta } from '@/Interfaz/Componentes/TarjetaCuenta';
@@ -31,13 +31,18 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
       ))}
 
       {cuentas.map((cuenta) => (
-        <TarjetaCuenta
-          key={cuenta.id}
-          nombre={cuenta.nombre}
-          balance={ObtenerBalanceCuenta(cuenta.id)}
-          moneda={moneda}
-          AlPresionar={() => navigation.navigate('PantallaDetalleCuenta', { idCuenta: cuenta.id, nombreCuenta: cuenta.nombre })}
-        />
+        <View key={cuenta.id} style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TarjetaCuenta
+            nombre={cuenta.nombre}
+            balance={ObtenerBalanceCuenta(cuenta.id)}
+            moneda={moneda}
+            AlPresionar={() => navigation.navigate('PantallaDetalleCuenta', { idCuenta: cuenta.id, nombreCuenta: cuenta.nombre })}
+          />
+          <IconButton icon="delete" onPress={() => {
+            const { EliminarCuenta } = UsarAlmacenAplicacion.getState();
+            EliminarCuenta(cuenta.id);
+          }} />
+        </View>
       ))}
     </ScrollView>
   );
