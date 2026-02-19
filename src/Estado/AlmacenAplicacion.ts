@@ -20,6 +20,8 @@ interface EstadoAplicacion {
   CrearCuenta(nombre: string, idGrupoPadre: string | null): void;
   RenombrarGrupo(idGrupo: string, nombre: string): void;
   RenombrarCuenta(idCuenta: string, nombre: string): void;
+  ReubicarGrupo(idGrupo: string, idNuevoGrupoPadre: string | null): boolean;
+  ReubicarCuenta(idCuenta: string, idNuevoGrupoPadre: string | null): void;
   ConvertirCuentaEnGrupo(idCuenta: string): Grupo | null;
   EliminarGrupo(idGrupo: string): void;
   EliminarCuenta(idCuenta: string): void;
@@ -83,6 +85,39 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
 
   RenombrarCuenta: (idCuenta, nombre) => {
     repositorio.ActualizarNombreCuenta(idCuenta, nombre);
+    get().InicializarDatos();
+  },
+
+  ReubicarGrupo: (idGrupo, idNuevoGrupoPadre) => {
+    if (idGrupo === idNuevoGrupoPadre) {
+      return false;
+    }
+
+    const grupos = get().grupos;
+    const idsDescendientes = new Set<string>();
+
+    const recolectarDescendientes = (idPadre: string): void => {
+      grupos
+        .filter((grupo) => grupo.idGrupoPadre === idPadre)
+        .forEach((grupoHijo) => {
+          idsDescendientes.add(grupoHijo.id);
+          recolectarDescendientes(grupoHijo.id);
+        });
+    };
+
+    recolectarDescendientes(idGrupo);
+
+    if (idNuevoGrupoPadre && idsDescendientes.has(idNuevoGrupoPadre)) {
+      return false;
+    }
+
+    repositorio.ActualizarGrupoPadre(idGrupo, idNuevoGrupoPadre);
+    get().InicializarDatos();
+    return true;
+  },
+
+  ReubicarCuenta: (idCuenta, idNuevoGrupoPadre) => {
+    repositorio.ActualizarCuentaPadre(idCuenta, idNuevoGrupoPadre);
     get().InicializarDatos();
   },
 

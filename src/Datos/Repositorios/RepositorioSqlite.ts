@@ -67,6 +67,10 @@ export class RepositorioSqlite
     this.bd.runSync('UPDATE grupos SET nombre = ? WHERE id = ?', [nombre, idGrupo]);
   }
 
+  ActualizarGrupoPadre(idGrupo: string, idGrupoPadre: string | null): void {
+    this.bd.runSync('UPDATE grupos SET idGrupoPadre = ? WHERE id = ?', [idGrupoPadre, idGrupo]);
+  }
+
   ActualizarNombreCuenta(idCuenta: string, nombre: string): void {
     this.bd.runSync('UPDATE cuentas SET nombre = ? WHERE id = ?', [nombre, idCuenta]);
   }
