@@ -212,15 +212,22 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
       return;
     }
 
-    const posicionY = evento.nativeEvent.locationY + scrollActualRef.current;
-    const zonaDetectada = Object.entries(zonasArrastre.current).find(([, zona]) => posicionY >= zona.y && posicionY <= zona.y + zona.alto);
+    const posicionLocalY = evento.nativeEvent.locationY;
+    const posicionesPosibles = [
+      posicionLocalY,
+      posicionLocalY + scrollActualRef.current
+    ];
+
+    const zonaDetectada = Object.entries(zonasArrastre.current).find(([, zona]) =>
+      posicionesPosibles.some((posicionY) => posicionY >= zona.y && posicionY <= zona.y + zona.alto)
+    );
 
     if (zonaDetectada && esObjetivoValido(zonaDetectada[1].idGrupoPadre)) {
       setObjetivoArrastre(zonaDetectada[1].idGrupoPadre ?? '__ROOT__');
       return;
     }
 
-    const dentroRaiz = posicionY >= zonaRaiz.y && posicionY <= zonaRaiz.y + zonaRaiz.alto;
+    const dentroRaiz = posicionesPosibles.some((posicionY) => posicionY >= zonaRaiz.y && posicionY <= zonaRaiz.y + zonaRaiz.alto);
     setObjetivoArrastre(dentroRaiz && esObjetivoValido(null) ? '__ROOT__' : null);
   };
 
