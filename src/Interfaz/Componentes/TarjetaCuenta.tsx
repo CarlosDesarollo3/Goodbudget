@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Text } from 'react-native-paper';
+import { Avatar, Card, Text } from 'react-native-paper';
 import { FormatearMoneda } from '@/Utilidades/Formatos';
 
 interface PropsTarjetaCuenta {
@@ -10,10 +10,14 @@ interface PropsTarjetaCuenta {
 }
 
 export const TarjetaCuenta = ({ nombre, balance, moneda, AlPresionar }: PropsTarjetaCuenta): React.JSX.Element => (
-  <Card mode="outlined" onPress={AlPresionar} style={{ marginVertical: 8 }}>
-    <Card.Title title={nombre} subtitle="Cuenta/Sobre" />
-    <Card.Content>
-      <Text variant="titleMedium">{FormatearMoneda(balance, moneda)}</Text>
-    </Card.Content>
+  <Card mode="outlined" onPress={AlPresionar} style={{ borderRadius: 12 }}>
+    <Card.Title
+      title={nombre}
+      subtitle="Cuenta/Sobre"
+      titleVariant="titleSmall"
+      subtitleVariant="bodySmall"
+      left={(props) => <Avatar.Icon {...props} icon="wallet-outline" size={32} />}
+      right={() => <Text variant="titleSmall">{FormatearMoneda(balance, moneda)}</Text>}
+    />
   </Card>
 );
