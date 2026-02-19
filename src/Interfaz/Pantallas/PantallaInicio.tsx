@@ -1,15 +1,17 @@
-import React, { useEffect, useMemo } from 'react';
-import { ScrollView, View } from 'react-native';
-import { Button, FAB, Text } from 'react-native-paper';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Appbar, FAB, Menu, Surface, Text } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { TarjetaGrupo } from '@/Interfaz/Componentes/TarjetaGrupo';
 import { TarjetaCuenta } from '@/Interfaz/Componentes/TarjetaCuenta';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 import { CalcularTotalesGrupoRecursivo } from '@/Servicios/MotorBalances';
+import { FormatearMoneda } from '@/Utilidades/Formatos';
 
 export const PantallaInicio = ({ navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaInicio'>): React.JSX.Element => {
   const { grupos, cuentasPorGrupo, moneda, InicializarDatos, ObtenerBalanceCuenta, EjecutarReglasPendientes } = UsarAlmacenAplicacion();
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
     InicializarDatos();
@@ -41,7 +43,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     const subgrupos = grupos.filter((item) => item.idGrupoPadre === idGrupo);
 
     return [
-      <View key={`grupo-${grupo.id}`} style={{ marginLeft: nivel * 12 }}>
+      <View key={`grupo-${grupo.id}`} style={[styles.itemContenedor, { marginLeft: nivel * 10 }]}>
         <TarjetaGrupo
           nombre={grupo.nombre}
           total={CalcularTotalesGrupoRecursivo(grupo.id, grupos, cuentas, mapaBalances)}
@@ -50,7 +52,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
         />
       </View>,
       ...cuentasGrupo.map((cuenta) => (
-        <View key={`cuenta-${cuenta.id}`} style={{ marginLeft: (nivel + 1) * 12 }}>
+        <View key={`cuenta-${cuenta.id}`} style={[styles.itemContenedor, { marginLeft: (nivel + 1) * 10 }]}>
           <TarjetaCuenta
             nombre={cuenta.nombre}
             balance={ObtenerBalanceCuenta(cuenta.id)}
@@ -64,15 +66,74 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
   };
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <Text variant="headlineSmall">Total general: {new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda }).format(totalGeneral)}</Text>
-      <Button onPress={() => navigation.navigate('PantallaCategorias')}>Categorías</Button>
-      <Button onPress={() => navigation.navigate('PantallaReglasRecurrentes')}>Reglas recurrentes</Button>
-      <Button onPress={() => navigation.navigate('PantallaConfiguracion')}>Configuración</Button>
-      <ScrollView>
+    <View style={styles.contenedor}>
+      <Appbar.Header mode="small" elevated style={styles.header}>
+        <Appbar.Content title="Goodbudget" subtitle="Tu panorama financiero" />
+        <Menu
+          visible={menuVisible}
+          onDismiss={() => setMenuVisible(false)}
+          anchor={<Appbar.Action icon="menu" onPress={() => setMenuVisible(true)} accessibilityLabel="Abrir menú" />}
+        >
+          <Menu.Item onPress={() => {
+            setMenuVisible(false);
+            navigation.navigate('PantallaCategorias');
+          }} title="Categorías" leadingIcon="shape-outline" />
+          <Menu.Item onPress={() => {
+            setMenuVisible(false);
+            navigation.navigate('PantallaReglasRecurrentes');
+          }} title="Reglas recurrentes" leadingIcon="calendar-sync" />
+          <Menu.Item onPress={() => {
+            setMenuVisible(false);
+            navigation.navigate('PantallaConfiguracion');
+          }} title="Configuración" leadingIcon="cog-outline" />
+        </Menu>
+      </Appbar.Header>
+
+      <Surface style={styles.tarjetaTotal} elevation={1}>
+        <Text variant="labelLarge" style={styles.textoSecundario}>Total general</Text>
+        <Text variant="headlineSmall">{FormatearMoneda(totalGeneral, moneda)}</Text>
+      </Surface>
+
+      <ScrollView contentContainerStyle={styles.listaContenedora}>
         {grupos.filter((grupo) => grupo.idGrupoPadre === null).flatMap((grupo) => RenderizarGrupoConContenido(grupo.id))}
       </ScrollView>
-      <FAB icon="plus" label="Nuevo grupo" onPress={() => UsarAlmacenAplicacion.getState().CrearGrupo('Nuevo grupo', null)} style={{ position: 'absolute', right: 16, bottom: 16 }} />
+
+      <FAB
+        icon="plus"
+        label="Nuevo grupo"
+        onPress={() => UsarAlmacenAplicacion.getState().CrearGrupo('Nuevo grupo', null)}
+        style={styles.fab}
+      />
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  contenedor: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingBottom: 16
+  },
+  header: {
+    backgroundColor: 'transparent'
+  },
+  tarjetaTotal: {
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10
+  },
+  textoSecundario: {
+    opacity: 0.75
+  },
+  listaContenedora: {
+    paddingBottom: 80
+  },
+  itemContenedor: {
+    marginBottom: 4
+  },
+  fab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16
+  }
+});
