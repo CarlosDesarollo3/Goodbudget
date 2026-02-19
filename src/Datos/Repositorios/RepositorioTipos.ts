@@ -5,8 +5,11 @@ export interface RepositorioSobres {
   ListarCuentasPorGrupo(idGrupoPadre: string | null): Cuenta[];
   CrearGrupo(grupo: Grupo): void;
   CrearCuenta(cuenta: Cuenta): void;
+  ActualizarNombreGrupo(idGrupo: string, nombre: string): void;
+  ActualizarNombreCuenta(idCuenta: string, nombre: string): void;
   ObtenerCuenta(idCuenta: string): Cuenta | null;
   ActualizarCuentaPadre(idCuenta: string, idGrupoPadre: string | null): void;
+  EliminarGrupo(idGrupo: string): void;
   EliminarCuenta(idCuenta: string): void;
 }
 
