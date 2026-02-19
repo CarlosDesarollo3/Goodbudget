@@ -25,6 +25,12 @@ const suscribirse = (fn: (id: string | null) => void) => {
   return () => subs.delete(fn);
 };
 
+export const CerrarFilaAbierta = (): void => {
+  if (filaAbiertaId !== null) {
+    publicarFilaAbierta(null);
+  }
+};
+
 export const FilaDeslizableAcciones = ({
   id,
   children,
