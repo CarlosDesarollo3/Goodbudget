@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Surface, Text } from 'react-native-paper';
+import { Button, Dialog, Portal, Snackbar, Surface, Text } from 'react-native-paper';
 import { FormatearMoneda } from '@/Utilidades/Formatos';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,22 +9,40 @@ import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 import { FilaTransaccion } from '@/Interfaz/Componentes/FilaTransaccion';
 import { RepositorioSqlite } from '@/Datos/Repositorios/RepositorioSqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CerrarFilaAbierta, FilaDeslizableAcciones } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
+import { Transaccion } from '@/Dominio/Modelos';
 
 const repositorio = new RepositorioSqlite();
 
 export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaDetalleCuenta'>): React.JSX.Element => {
   const { idCuenta } = route.params;
-  const { ObtenerBalanceCuenta, moneda, ConvertirCuentaEnGrupo } = UsarAlmacenAplicacion();
+  const { ObtenerBalanceCuenta, moneda, ConvertirCuentaEnGrupo, EliminarTransaccion } = UsarAlmacenAplicacion();
   const insets = useSafeAreaInsets();
-  const [transacciones, setTransacciones] = React.useState(() => repositorio.ListarTransaccionesPorCuenta(idCuenta));
+  const [transacciones, setTransacciones] = React.useState<Transaccion[]>([]);
+  const [transaccionEliminar, setTransaccionEliminar] = React.useState<Transaccion | null>(null);
+  const [mostrarAvisoGesto, setMostrarAvisoGesto] = React.useState(false);
+
+  const recargarTransacciones = React.useCallback((): void => {
+    setTransacciones(repositorio.ListarTransaccionesPorCuenta(idCuenta));
+  }, [idCuenta]);
 
   useFocusEffect(
     React.useCallback(() => {
-      setTransacciones(repositorio.ListarTransaccionesPorCuenta(idCuenta));
-    }, [idCuenta])
+      recargarTransacciones();
+    }, [recargarTransacciones])
   );
 
   const balanceCuenta = ObtenerBalanceCuenta(idCuenta);
+
+  const confirmarEliminacion = (): void => {
+    if (!transaccionEliminar) {
+      return;
+    }
+
+    EliminarTransaccion(transaccionEliminar.id);
+    setTransaccionEliminar(null);
+    recargarTransacciones();
+  };
 
   return (
     <View style={styles.contenedor}>
@@ -35,15 +53,30 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
         </Text>
       </Surface>
 
-      <ScrollView contentContainerStyle={[styles.listaContenedora, { paddingBottom: 100 + insets.bottom }]}>
+      <ScrollView
+        contentContainerStyle={[styles.listaContenedora, { paddingBottom: 100 + insets.bottom }]}
+        onStartShouldSetResponder={() => {
+          CerrarFilaAbierta();
+          return false;
+        }}
+      >
         {transacciones.map((transaccion) => (
-          <FilaTransaccion
+          <FilaDeslizableAcciones
             key={transaccion.id}
-            transaccion={transaccion}
-            idCuentaContexto={idCuenta}
-            moneda={moneda}
-            onPress={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
-          />
+            id={transaccion.id}
+            onEditar={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
+            onEliminar={() => setTransaccionEliminar(transaccion)}
+            etiquetaEditar="Editar"
+            etiquetaEliminar="Eliminar"
+            onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
+          >
+            <FilaTransaccion
+              transaccion={transaccion}
+              idCuentaContexto={idCuenta}
+              moneda={moneda}
+              onPress={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
+            />
+          </FilaDeslizableAcciones>
         ))}
       </ScrollView>
 
@@ -69,6 +102,23 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
           Convertir en grupo
         </Button>
       </View>
+
+      <Portal>
+        <Dialog visible={Boolean(transaccionEliminar)} onDismiss={() => setTransaccionEliminar(null)}>
+          <Dialog.Title>Eliminar movimiento</Dialog.Title>
+          <Dialog.Content>
+            <Text>¿Seguro que deseas eliminar este movimiento?</Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setTransaccionEliminar(null)}>Cancelar</Button>
+            <Button onPress={confirmarEliminacion}>Eliminar</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      <Snackbar visible={mostrarAvisoGesto} onDismiss={() => setMostrarAvisoGesto(false)} duration={1800}>
+        Completa el gesto para activar la acción
+      </Snackbar>
     </View>
   );
 };

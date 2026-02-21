@@ -13,6 +13,8 @@ interface PropsFilaDeslizableAcciones {
   children: React.ReactNode;
   onEditar: () => void;
   onEliminar: () => void;
+  etiquetaEditar?: string;
+  etiquetaEliminar?: string;
   onDeslizamientoInsuficiente?: () => void;
 }
 
@@ -38,6 +40,8 @@ export const FilaDeslizableAcciones = ({
   children,
   onEditar,
   onEliminar,
+  etiquetaEditar = 'Renombrar',
+  etiquetaEliminar = 'Eliminar',
   onDeslizamientoInsuficiente
 }: PropsFilaDeslizableAcciones): React.JSX.Element => {
   const traslacionX = useRef(new Animated.Value(0)).current;
@@ -185,7 +189,7 @@ export const FilaDeslizableAcciones = ({
           hitSlop={8}
         >
           <Animated.View style={[styles.accion, styles.accionEditar, { opacity: opacidadEditar }]}> 
-            <Text style={styles.textoAccion}>Renombrar</Text>
+            <Text style={styles.textoAccion}>{etiquetaEditar}</Text>
           </Animated.View>
         </Pressable>
 
@@ -200,7 +204,7 @@ export const FilaDeslizableAcciones = ({
           hitSlop={8}
         >
           <Animated.View style={[styles.accion, styles.accionEliminar, { opacity: opacidadEliminar }]}> 
-            <Text style={styles.textoAccion}>Eliminar</Text>
+            <Text style={styles.textoAccion}>{etiquetaEliminar}</Text>
           </Animated.View>
         </Pressable>
       </View>
