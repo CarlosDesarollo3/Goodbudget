@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, HelperText, Modal, Portal, Switch, Text, TextInput } from 'react-native-paper';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet } from 'react-native';
+import { Button, Card, Switch, Text, TextInput } from 'react-native-paper';
 import { formatISO } from 'date-fns';
 import { ReglaRecurrente } from '@/Dominio/Modelos';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 import { FormatearMoneda } from '@/Utilidades/Formatos';
+import { EstadoVacioLista } from '@/Interfaz/Componentes/EstadoVacioLista';
 
 export const PantallaReglasRecurrentes = (): React.JSX.Element => {
   const {
@@ -115,19 +116,9 @@ export const PantallaReglasRecurrentes = (): React.JSX.Element => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.contenedor}>
-      <View style={styles.filaSelector}>
-        <Text variant="labelLarge">Cuenta origen</Text>
-        <Pressable style={styles.tarjetaCuenta} onPress={() => setSelectorAbierto('origen')}>
-          <Text variant="titleMedium">{cuentasPorId.get(idCuentaOrigen) ?? 'Seleccionar cuenta'}</Text>
-        </Pressable>
-      </View>
-      <View style={styles.filaSelector}>
-        <Text variant="labelLarge">Cuenta destino</Text>
-        <Pressable style={styles.tarjetaCuenta} onPress={() => setSelectorAbierto('destino')}>
-          <Text variant="titleMedium">{cuentasPorId.get(idCuentaDestino) ?? 'Seleccionar cuenta'}</Text>
-        </Pressable>
-      </View>
+    <ScrollView contentContainerStyle={styles.contenido}>
+      <TextInput label="Cuenta origen" value={idCuentaOrigen} onChangeText={setIdCuentaOrigen} />
+      <TextInput label="Cuenta destino" value={idCuentaDestino} onChangeText={setIdCuentaDestino} />
       <TextInput label="Día del mes" value={diaDelMes} onChangeText={setDiaDelMes} keyboardType="number-pad" />
       <TextInput label="Monto" value={monto} onChangeText={setMonto} keyboardType="decimal-pad" />
       <Button mode="contained" onPress={GuardarRegla}>
@@ -140,107 +131,43 @@ export const PantallaReglasRecurrentes = (): React.JSX.Element => {
       ) : null}
       <HelperText type="error" visible={!!errorFormulario}>{errorFormulario}</HelperText>
 
-      {reglas.map((regla) => (
-        <Card key={regla.id} mode="outlined">
-          <Card.Title title={`Regla mensual día ${regla.diaDelMes}`} />
-          <Card.Content>
-            <Text>{`${cuentasPorId.get(regla.idCuentaOrigen) ?? regla.idCuentaOrigen} → ${cuentasPorId.get(regla.idCuentaDestino) ?? regla.idCuentaDestino}`}</Text>
-            <Text>Monto: {FormatearMoneda(regla.monto, moneda)}</Text>
-            <Text>Próxima ejecución: {regla.proximaEjecucionEn.slice(0, 10)}</Text>
-            <View style={styles.filaAccionesRegla}>
-              <Text>Habilitada</Text>
-              <Switch
-                value={regla.habilitada}
-                onValueChange={(habilitada) => ActualizarReglaRecurrente({ ...regla, habilitada })}
-              />
-            </View>
-            <View style={styles.filaBotonesRegla}>
-              <Button mode="text" compact onPress={() => CargarReglaEnFormulario(regla)}>Editar</Button>
-              <Button mode="text" compact textColor="#C4362D" onPress={() => EliminarReglaRecurrente(regla.id)}>Eliminar</Button>
-            </View>
-          </Card.Content>
-        </Card>
-      ))}
-
-      <Portal>
-        <Modal visible={selectorAbierto !== null} onDismiss={() => setSelectorAbierto(null)} contentContainerStyle={styles.modalCuentas}>
-          <Text variant="titleMedium">
-            {selectorAbierto === 'origen' ? 'Seleccionar cuenta origen' : 'Seleccionar cuenta destino'}
-          </Text>
-          <TextInput
-            mode="outlined"
-            label="Buscar cuenta"
-            value={busquedaCuenta}
-            onChangeText={setBusquedaCuenta}
-          />
-          <ScrollView style={styles.listaCuentasModal} keyboardShouldPersistTaps="handled">
-            {cuentasDisponiblesSelector.map((cuenta) => (
-              <Pressable
-                key={cuenta.id}
-                style={styles.itemCuentaModal}
-                onPress={() => {
-                  if (selectorAbierto === 'origen') {
-                    setIdCuentaOrigen(cuenta.id);
-                  }
-                  if (selectorAbierto === 'destino') {
-                    setIdCuentaDestino(cuenta.id);
-                  }
-                  setSelectorAbierto(null);
-                }}
-              >
-                <Text variant="bodyLarge">{cuenta.nombre}</Text>
-              </Pressable>
-            ))}
-            {cuentasDisponiblesSelector.length === 0 ? <HelperText type="info">No hay cuentas disponibles</HelperText> : null}
-          </ScrollView>
-        </Modal>
-      </Portal>
+      {reglas.length === 0 ? (
+        <EstadoVacioLista
+          icono="calendar-sync"
+          titulo="No tienes reglas recurrentes"
+          descripcion="Automatiza transferencias mensuales para ahorrar tiempo y mantener tus cuentas al día."
+          etiquetaCta="Crear primera regla"
+          onPressCta={() =>
+            CrearReglaRecurrente({
+              habilitada: true,
+              diaDelMes: Number(diaDelMes),
+              idCuentaOrigen,
+              idCuentaDestino,
+              monto: Number(monto),
+              proximaEjecucionEn: formatISO(new Date())
+            })
+          }
+        />
+      ) : (
+        reglas.map((regla) => (
+          <Card key={regla.id} mode="outlined">
+            <Card.Title title={`Regla mensual día ${regla.diaDelMes}`} />
+            <Card.Content>
+              <Text>{`${regla.idCuentaOrigen} → ${regla.idCuentaDestino}`}</Text>
+              <Text>Monto: {FormatearMoneda(regla.monto, moneda)}</Text>
+              <Text>Próxima ejecución: {regla.proximaEjecucionEn.slice(0, 10)}</Text>
+              <Switch value={regla.habilitada} />
+            </Card.Content>
+          </Card>
+        ))
+      )}
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  contenedor: {
+  contenido: {
     padding: 16,
-    gap: 8
-  },
-  filaSelector: {
-    gap: 4
-  },
-  tarjetaCuenta: {
-    borderRadius: 12,
-    padding: 12,
-    backgroundColor: '#EEF3FF',
-    borderWidth: 1,
-    borderColor: '#CDD9FF'
-  },
-  filaAccionesRegla: {
-    marginTop: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between'
-  },
-  filaBotonesRegla: {
-    marginTop: 4,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 4
-  },
-  modalCuentas: {
-    margin: 16,
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    gap: 6,
-    minHeight: '65%',
-    maxHeight: '94%'
-  },
-  listaCuentasModal: {
-    flexGrow: 1
-  },
-  itemCuentaModal: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ECECEC'
+    gap: 10
   }
 });

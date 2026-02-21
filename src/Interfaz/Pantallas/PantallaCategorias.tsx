@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Dialog, HelperText, IconButton, List, Portal, Text, TextInput } from 'react-native-paper';
-import { Categoria } from '@/Dominio/Modelos';
-import { EsquemaCategoria } from '@/Dominio/Esquemas';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet } from 'react-native';
+import { Button, TextInput } from 'react-native-paper';
+import { ChipCategoria } from '@/Interfaz/Componentes/ChipCategoria';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
+import { EstadoVacioLista } from '@/Interfaz/Componentes/EstadoVacioLista';
 
 type ModoFormulario = 'crear' | 'editar';
 
@@ -107,105 +107,37 @@ export const PantallaCategorias = (): React.JSX.Element => {
   };
 
   return (
-    <>
-      <ScrollView contentContainerStyle={styles.contenedor}>
-        <Button mode="contained" onPress={abrirCrear} style={styles.botonNuevaCategoria}>
-          Nueva categoría
-        </Button>
-
-        {categorias.map((categoria) => (
-          <List.Item
-            key={categoria.id}
-            title={categoria.nombre}
-            description={`Icono: ${categoria.icono ?? ICONO_CATEGORIA_DEFAULT}`}
-            left={() => (
-              <View style={[styles.indicadorColor, { backgroundColor: categoria.color ?? COLOR_CATEGORIA_DEFAULT }]}>
-                <List.Icon icon={categoria.icono ?? ICONO_CATEGORIA_DEFAULT} color="#1D1B20" />
-              </View>
-            )}
-            right={() => (
-              <View style={styles.accionesItem}>
-                <IconButton icon="pencil" onPress={() => abrirEditar(categoria)} accessibilityLabel="Editar categoría" />
-                <IconButton icon="delete" onPress={() => EliminarCategoria(categoria.id)} accessibilityLabel="Eliminar categoría" />
-              </View>
-            )}
-            style={styles.itemCategoria}
-          />
-        ))}
-      </ScrollView>
-
-      <Portal>
-        <Dialog visible={mostrarModal} onDismiss={limpiarYCerrarModal}>
-          <Dialog.Title>{modoFormulario === 'crear' ? 'Nueva categoría' : 'Editar categoría'}</Dialog.Title>
-          <Dialog.Content>
-            <TextInput
-              label="Nombre"
-              value={formulario.nombre}
-              onChangeText={(valor) => setFormulario((previo) => ({ ...previo, nombre: valor }))}
-            />
-            <HelperText type="error" visible={Boolean(errores.nombre)}>
-              {errores.nombre}
-            </HelperText>
-
-            <TextInput
-              label="Color"
-              placeholder="#D1C4E9"
-              value={formulario.color}
-              onChangeText={(valor) => setFormulario((previo) => ({ ...previo, color: valor }))}
-            />
-            <HelperText type="error" visible={Boolean(errores.color)}>
-              {errores.color}
-            </HelperText>
-
-            <TextInput
-              label="Ícono"
-              placeholder="tag"
-              value={formulario.icono}
-              onChangeText={(valor) => setFormulario((previo) => ({ ...previo, icono: valor }))}
-            />
-            <HelperText type="error" visible={Boolean(errores.icono)}>
-              {errores.icono}
-            </HelperText>
-
-            {errorGeneral ? <Text style={styles.errorGeneral}>{errorGeneral}</Text> : null}
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={limpiarYCerrarModal}>Cancelar</Button>
-            <Button mode="contained" onPress={guardarCategoria}>Guardar</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
-    </>
+    <ScrollView contentContainerStyle={styles.contenido}>
+      <TextInput label="Nueva categoría" value={nombreCategoria} onChangeText={setNombreCategoria} />
+      <Button mode="contained" style={styles.boton} onPress={() => { CrearCategoria(nombreCategoria, '#D1C4E9'); setNombreCategoria(''); }}>
+        Guardar categoría
+      </Button>
+      {categorias.length === 0 ? (
+        <EstadoVacioLista
+          icono="shape-outline"
+          titulo="Aún no hay categorías"
+          descripcion="Crea categorías para clasificar gastos e ingresos y entender mejor en qué se mueve tu dinero."
+          etiquetaCta="Añadir categoría"
+          onPressCta={() => {
+            CrearCategoria(nombreCategoria.trim() || 'General', '#D1C4E9');
+            setNombreCategoria('');
+          }}
+        />
+      ) : (
+        categorias.map((categoria) => (
+          <ChipCategoria key={categoria.id} nombre={categoria.nombre} color={categoria.color} />
+        ))
+      )}
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  contenedor: {
+  contenido: {
     padding: 16,
-    gap: 12
+    gap: 10
   },
-  botonNuevaCategoria: {
-    marginBottom: 8
-  },
-  itemCategoria: {
-    borderRadius: 12,
-    backgroundColor: '#F7F2FA'
-  },
-  accionesItem: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  indicadorColor: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-    marginTop: 8
-  },
-  errorGeneral: {
-    color: '#B3261E',
-    marginTop: 8
+  boton: {
+    marginTop: 4
   }
 });
