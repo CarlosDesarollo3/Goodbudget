@@ -368,14 +368,16 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
         onTouchMove={actualizarObjetivoArrastre}
         onTouchEnd={confirmarArrastre}
       >
-        <Surface style={[styles.zonaRaiz, objetivoArrastre === '__ROOT__' ? styles.destinoActivo : undefined]} elevation={0} onLayout={(evento) => {
-          const { y, height } = evento.nativeEvent.layout;
-          setZonaRaiz({ y, alto: height });
-        }}>
-          {nodoArrastrado?.tipo === 'cuenta' ? (
-            <Text variant="labelLarge">Nivel raíz (suelta aquí para sacar fuera del grupo)</Text>
+          {nodoArrastrado?.tipo ? (
+
+            <Surface style={[styles.zonaRaiz, objetivoArrastre === '__ROOT__' ? styles.destinoActivo : undefined]} elevation={0} onLayout={(evento) => {
+              const { y, height } = evento.nativeEvent.layout;
+              setZonaRaiz({ y, alto: height });
+            }}>
+                <Text variant="labelLarge">Nivel raíz (suelta aquí para sacar fuera del grupo)</Text>
+            
+            </Surface>
           ) : null}
-        </Surface>
         {cuentasRaiz.map((cuenta) => (
           <View key={`cuenta-raiz-${cuenta.id}`} style={styles.itemContenedor}>
             <FilaDeslizableAcciones

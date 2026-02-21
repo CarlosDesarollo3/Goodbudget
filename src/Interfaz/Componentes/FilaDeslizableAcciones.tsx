@@ -4,7 +4,7 @@ import { Text } from 'react-native-paper';
 
 const DESPLAZAMIENTO_MAXIMO = 96;
 const UMBRAL_APERTURA = 48;
-const UMBRAL_EJECUTAR = 82;
+const UMBRAL_EJECUTAR = 42;
 const UMBRAL_VELOCIDAD = 0.45;
 const UMBRAL_INICIO_GESTO = 12;
 
@@ -160,14 +160,14 @@ export const FilaDeslizableAcciones = ({
   );
 
   const opacidadEditar = traslacionX.interpolate({
-    inputRange: [0, DESPLAZAMIENTO_MAXIMO * 0.4, DESPLAZAMIENTO_MAXIMO],
-    outputRange: [0.2, 0.75, 1],
+    inputRange: [DESPLAZAMIENTO_MAXIMO * 0.25, DESPLAZAMIENTO_MAXIMO],
+    outputRange: [0, 1],
     extrapolate: 'clamp'
   });
 
   const opacidadEliminar = traslacionX.interpolate({
-    inputRange: [-DESPLAZAMIENTO_MAXIMO, -DESPLAZAMIENTO_MAXIMO * 0.4, 0],
-    outputRange: [1, 0.75, 0.2],
+    inputRange: [-DESPLAZAMIENTO_MAXIMO, -DESPLAZAMIENTO_MAXIMO * 0.25],
+    outputRange: [1, 0],
     extrapolate: 'clamp'
   });
 
