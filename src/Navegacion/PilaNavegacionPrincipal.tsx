@@ -27,7 +27,14 @@ export const PilaNavegacionPrincipal = (): React.JSX.Element => {
         <Pila.Screen name="PantallaInicio" component={PantallaInicio} options={{ title: 'Manejo de Sobres' }} />
         <Pila.Screen name="PantallaDetalleGrupo" component={PantallaDetalleGrupo} options={{ title: 'Detalle de Grupo' }} />
         <Pila.Screen name="PantallaDetalleCuenta" component={PantallaDetalleCuenta} options={{ title: 'Detalle de Cuenta' }} />
-        <Pila.Screen name="PantallaFormularioTransaccion" component={PantallaFormularioTransaccion} options={{ title: 'Nueva Transacción' }} />
+        <Pila.Screen
+          name="PantallaFormularioTransaccion"
+          component={PantallaFormularioTransaccion}
+          options={({ route }) => {
+            const editando = Boolean((route.params as { transaccion?: unknown } | undefined)?.transaccion);
+            return { title: editando ? 'Editar transacción' : 'Nueva transacción' };
+          }}
+        />
         <Pila.Screen name="PantallaCategorias" component={PantallaCategorias} options={{ title: 'Categorías' }} />
         <Pila.Screen name="PantallaReglasRecurrentes" component={PantallaReglasRecurrentes} options={{ title: 'Reglas Recurrentes' }} />
         <Pila.Screen name="PantallaConfiguracion" component={PantallaConfiguracion} options={{ title: 'Configuración' }} />

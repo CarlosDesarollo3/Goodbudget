@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Appbar, Menu } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
@@ -14,7 +15,11 @@ export const MenuCabecera = ({ navigation }: PropiedadesMenuCabecera): React.JSX
     <Menu
       visible={menuVisible}
       onDismiss={() => setMenuVisible(false)}
-      anchor={<Appbar.Action icon="menu" iconColor="#000000" onPress={() => setMenuVisible(true)} accessibilityLabel="Abrir menú" />}
+      anchor={
+        <View style={styles.anclaMenu}>
+          <Appbar.Action icon="menu" iconColor="#000000" style={styles.botonMenu} onPress={() => setMenuVisible(true)} accessibilityLabel="Abrir menú" />
+        </View>
+      }
     >
       <Menu.Item
         onPress={() => {
@@ -43,3 +48,14 @@ export const MenuCabecera = ({ navigation }: PropiedadesMenuCabecera): React.JSX
     </Menu>
   );
 };
+
+const styles = StyleSheet.create({
+  anclaMenu: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 44
+  },
+  botonMenu: {
+    margin: 0
+  }
+});

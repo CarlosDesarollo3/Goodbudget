@@ -9,6 +9,7 @@ import { CerrarFilaAbierta, FilaDeslizableAcciones } from '@/Interfaz/Componente
 import { CLAVE_CUENTAS_RAIZ, UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 import { CalcularTotalesGrupoRecursivo } from '@/Servicios/MotorBalances';
 import { FormatearMoneda } from '@/Utilidades/Formatos';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type TipoNodo = 'grupo' | 'cuenta';
 type TipoCreacion = 'grupo' | 'cuenta';
@@ -52,6 +53,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     EliminarGrupo,
     EliminarCuenta
   } = UsarAlmacenAplicacion();
+  const insets = useSafeAreaInsets();
   const [expansionPorGrupo, setExpansionPorGrupo] = React.useState<Record<string, boolean>>({});
   const [nodoRenombrar, setNodoRenombrar] = React.useState<NodoSeleccionado | null>(null);
   const [nodoEliminar, setNodoEliminar] = React.useState<NodoSeleccionado | null>(null);
@@ -354,7 +356,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
       <ScrollView
         ref={scrollRef}
         onLayout={medirOffsetsPantalla}
-        contentContainerStyle={styles.listaContenedora}
+        contentContainerStyle={[styles.listaContenedora, { paddingBottom: 100 + insets.bottom }]}
         scrollEnabled={!nodoArrastrado}
         onStartShouldSetResponder={() => {
           CerrarFilaAbierta();
@@ -406,11 +408,11 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
         </Surface>
       ) : null}
 
-      <View style={styles.accionesInferiores}>
-        <Button mode="contained" onPress={() => abrirDialogoCreacion('cuenta')}>
+      <View style={[styles.accionesInferiores, { bottom: 12 + insets.bottom }]}>
+        <Button mode="contained" style={styles.botonAccion} onPress={() => abrirDialogoCreacion('cuenta')}>
           Nueva cuenta
         </Button>
-        <Button mode="outlined" onPress={() => abrirDialogoCreacion('grupo')}>
+        <Button mode="outlined" style={styles.botonAccion} onPress={() => abrirDialogoCreacion('grupo')}>
           Nuevo grupo
         </Button>
       </View>
@@ -494,9 +496,7 @@ const styles = StyleSheet.create({
   montoNegativo: {
     color: '#C4362D'
   },
-  listaContenedora: {
-    paddingBottom: 88
-  },
+  listaContenedora: {},
   itemContenedor: {
     marginBottom: 6
   },
@@ -518,8 +518,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    bottom: 16,
     flexDirection: 'row',
+    justifyContent: 'center',
     gap: 8
+  },
+  botonAccion: {
+    flex: 1,
+    maxWidth: 220
   }
 });
