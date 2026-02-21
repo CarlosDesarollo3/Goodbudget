@@ -1,5 +1,6 @@
 import React from 'react';
-import { List, Text } from 'react-native-paper';
+import { View } from 'react-native';
+import { IconButton, List, Text } from 'react-native-paper';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { TipoTransaccion, Transaccion } from '@/Dominio/Modelos';
@@ -10,9 +11,10 @@ interface PropsFilaTransaccion {
   idCuentaContexto: string;
   moneda: string;
   onPress?: () => void;
+  onDuplicar?: () => void;
 }
 
-export const FilaTransaccion = ({ transaccion, idCuentaContexto, moneda, onPress }: PropsFilaTransaccion): React.JSX.Element => {
+export const FilaTransaccion = ({ transaccion, idCuentaContexto, moneda, onPress, onDuplicar }: PropsFilaTransaccion): React.JSX.Element => {
   const esTransferencia = transaccion.tipo === TipoTransaccion.TRANSFERENCIA;
   const esIngreso = transaccion.tipo === TipoTransaccion.INGRESO || (esTransferencia && transaccion.idCuentaDestino === idCuentaContexto);
   const esGasto = transaccion.tipo === TipoTransaccion.GASTO || (esTransferencia && transaccion.idCuentaOrigen === idCuentaContexto);
@@ -27,9 +29,12 @@ export const FilaTransaccion = ({ transaccion, idCuentaContexto, moneda, onPress
       description={`${format(new Date(transaccion.fecha), 'dd MMM yyyy', { locale: es })}${transaccion.nota ? ` · ${transaccion.nota}` : ''}`}
       left={(props) => <List.Icon {...props} icon={iconoTransaccion} color={colorIcono} />}
       right={() => (
-        <Text variant="titleSmall" style={{ color: colorMonto }}>
-          {FormatearMoneda(transaccion.monto, moneda)}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {onDuplicar ? <IconButton icon="content-copy" size={18} onPress={onDuplicar} /> : null}
+          <Text variant="titleSmall" style={{ color: colorMonto }}>
+            {FormatearMoneda(transaccion.monto, moneda)}
+          </Text>
+        </View>
       )}
       onPress={onPress}
     />

@@ -175,33 +175,25 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
           return false;
         }}
       >
-        {transaccionesAgrupadasPorMes.length === 0 ? (
-          <Text style={styles.textoVacio}>No hay movimientos para los filtros seleccionados.</Text>
-        ) : (
-          transaccionesAgrupadasPorMes.map((grupo) => (
-            <View key={grupo.clave}>
-              <Text variant="titleMedium" style={styles.subtituloMes}>{grupo.titulo}</Text>
-              {grupo.transacciones.map((transaccion) => (
-                <FilaDeslizableAcciones
-                  key={transaccion.id}
-                  id={transaccion.id}
-                  onEditar={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
-                  onEliminar={() => setTransaccionEliminar(transaccion)}
-                  etiquetaEditar="Editar"
-                  etiquetaEliminar="Eliminar"
-                  onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
-                >
-                  <FilaTransaccion
-                    transaccion={transaccion}
-                    idCuentaContexto={idCuenta}
-                    moneda={moneda}
-                    onPress={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
-                  />
-                </FilaDeslizableAcciones>
-              ))}
-            </View>
-          ))
-        )}
+        {transacciones.map((transaccion) => (
+          <FilaDeslizableAcciones
+            key={transaccion.id}
+            id={transaccion.id}
+            onEditar={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
+            onEliminar={() => setTransaccionEliminar(transaccion)}
+            etiquetaEditar="Editar"
+            etiquetaEliminar="Eliminar"
+            onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
+          >
+            <FilaTransaccion
+              transaccion={transaccion}
+              idCuentaContexto={idCuenta}
+              moneda={moneda}
+              onPress={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
+              onDuplicar={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion, duplicar: true })}
+            />
+          </FilaDeslizableAcciones>
+        ))}
       </ScrollView>
 
       <View style={[styles.accionesInferiores, { bottom: 12 + insets.bottom }]}>

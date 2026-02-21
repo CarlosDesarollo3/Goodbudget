@@ -36,8 +36,8 @@ interface EstadoAplicacion {
   EliminarReglaRecurrente(idRegla: string): void;
   EjecutarReglasPendientes(): number;
   GuardarMoneda(moneda: string): void;
-  ExportarDatos(): string;
-  ImportarDatos(contenidoRespaldo: string): void;
+  ObtenerValorConfiguracion(clave: string): string | null;
+  GuardarValorConfiguracion(clave: string, valor?: string): void;
   ObtenerBalanceCuenta(idCuenta: string): number;
 }
 
@@ -230,24 +230,10 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     set({ moneda });
   },
 
-  ExportarDatos: () => {
-    InicializarBd();
-    const datos = repositorio.ExportarDatos();
-    return JSON.stringify({ version: 1, exportadoEn: formatISO(new Date()), datos }, null, 2);
-  },
+  ObtenerValorConfiguracion: (clave) => repositorio.ObtenerValorConfiguracion(clave),
 
-  ImportarDatos: (contenidoRespaldo) => {
-    InicializarBd();
-    const respaldo = JSON.parse(contenidoRespaldo) as {
-      datos?: ReturnType<RepositorioSqlite['ExportarDatos']>;
-    };
-
-    if (!respaldo?.datos) {
-      throw new Error('El archivo no contiene un respaldo válido.');
-    }
-
-    repositorio.ImportarDatos(respaldo.datos);
-    get().InicializarDatos();
+  GuardarValorConfiguracion: (clave, valor) => {
+    repositorio.GuardarValorConfiguracion(clave, valor);
   },
 
   ObtenerBalanceCuenta: (idCuenta) => {
