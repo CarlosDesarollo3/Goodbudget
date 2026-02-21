@@ -19,6 +19,8 @@ import { MotorRecurrencias } from '@/Servicios/MotorRecurrencias';
 import { ModoTema } from '@/Interfaz/Tema/temaAplicacion';
 
 interface EstadoAplicacion {
+  ExportarDatos(): string;
+  ImportarDatos(datos: string): void;
   grupos: Grupo[];
   cuentasPorGrupo: Record<string, Cuenta[]>;
   categorias: Categoria[];
@@ -49,6 +51,9 @@ interface EstadoAplicacion {
   EliminarReglaRecurrente(idRegla: string): void;
   EjecutarReglasPendientes(): number;
   GuardarMoneda(moneda: string): void;
+  ObtenerValorConfiguracion(clave: string): string | null;
+  GuardarValorConfiguracion(clave: string, valor?: string): void;
+  GuardarModoTema(modoTema: ModoTema): void;
   CrearObjetivoPresupuesto(datos: Omit<ObjetivoPresupuesto, 'id' | 'creadoEn' | 'actualizadoEn'>): void;
   ActualizarObjetivoPresupuesto(objetivo: ObjetivoPresupuesto): void;
   EliminarObjetivoPresupuesto(idObjetivo: string): void;
@@ -84,8 +89,9 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     const reglas = repositorio.ListarReglas();
     const moneda = repositorio.ObtenerMoneda();
     const objetivosPresupuesto = repositorio.ListarObjetivosPresupuesto();
+    const modoTema = repositorio.ObtenerModoTema();
 
-    set({ grupos, cuentasPorGrupo, categorias, reglas, moneda, objetivosPresupuesto });
+    set({ grupos, cuentasPorGrupo, categorias, reglas, moneda, objetivosPresupuesto, modoTema });
   },
 
   CrearGrupo: (nombre, idGrupoPadre) => {
@@ -246,6 +252,24 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
   GuardarMoneda: (moneda) => {
     repositorio.GuardarMoneda(moneda);
     set({ moneda });
+  },
+
+  ObtenerValorConfiguracion: (clave) => repositorio.ObtenerValorConfiguracion(clave),
+
+  GuardarValorConfiguracion: (clave, valor) => {
+    repositorio.GuardarValorConfiguracion(clave, valor);
+  },
+
+  GuardarModoTema: (modoTema) => {
+    repositorio.GuardarModoTema(modoTema);
+    set({ modoTema });
+  },
+
+  ExportarDatos: () => JSON.stringify(repositorio.ExportarDatos()),
+
+  ImportarDatos: (datos) => {
+    repositorio.ImportarDatos(JSON.parse(datos));
+    get().InicializarDatos();
   },
 
   CrearObjetivoPresupuesto: (datos) => {

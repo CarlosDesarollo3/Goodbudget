@@ -1,5 +1,6 @@
 import React from 'react';
-import { List, Text, useTheme } from 'react-native-paper';
+import { View } from 'react-native';
+import { IconButton, List, Text, useTheme } from 'react-native-paper';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { TipoTransaccion, Transaccion } from '@/Dominio/Modelos';
@@ -14,7 +15,7 @@ interface PropsFilaTransaccion {
   onDuplicar?: () => void;
 }
 
-export const FilaTransaccion = ({ transaccion, idCuentaContexto, moneda, onPress }: PropsFilaTransaccion): React.JSX.Element => {
+export const FilaTransaccion = ({ transaccion, idCuentaContexto, moneda, onPress, onDuplicar }: PropsFilaTransaccion): React.JSX.Element => {
   const tema = useTheme<TemaAplicacion>();
   const esTransferencia = transaccion.tipo === TipoTransaccion.TRANSFERENCIA;
   const esIngreso = transaccion.tipo === TipoTransaccion.INGRESO || (esTransferencia && transaccion.idCuentaDestino === idCuentaContexto);
