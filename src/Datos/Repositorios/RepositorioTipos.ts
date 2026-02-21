@@ -34,6 +34,8 @@ export interface RepositorioReglas {
 }
 
 export interface RepositorioConfiguracion {
+  ObtenerValorConfiguracion(clave: string): string | null;
+  GuardarValorConfiguracion(clave: string, valor: string): void;
   ObtenerMoneda(): string;
   GuardarMoneda(moneda: string): void;
 }

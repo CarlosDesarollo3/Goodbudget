@@ -51,7 +51,10 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     ReubicarGrupo,
     ReubicarCuenta,
     EliminarGrupo,
-    EliminarCuenta
+    EliminarCuenta,
+    onboardingGestosCompletado,
+    solicitudAyudaRapida,
+    MarcarOnboardingGestosCompletado
   } = UsarAlmacenAplicacion();
   const insets = useSafeAreaInsets();
   const [expansionPorGrupo, setExpansionPorGrupo] = React.useState<Record<string, boolean>>({});
@@ -61,7 +64,9 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
   const [nombreTemporal, setNombreTemporal] = React.useState('');
   const [montoInicialTemporal, setMontoInicialTemporal] = React.useState('0');
   const [mostrarAvisoGesto, setMostrarAvisoGesto] = React.useState(false);
+  const [mostrarCoachMarks, setMostrarCoachMarks] = React.useState(false);
   const [avisoReubicacion, setAvisoReubicacion] = React.useState<string | null>(null);
+  const [estadoSoltar, setEstadoSoltar] = React.useState<'valido' | 'invalido' | null>(null);
   const [nodoArrastrado, setNodoArrastrado] = React.useState<NodoArrastrable | null>(null);
   const [objetivoArrastre, setObjetivoArrastre] = React.useState<string | null>(null);
   const [zonaRaiz, setZonaRaiz] = React.useState<{ y: number; alto: number }>({ y: 0, alto: 0 });
@@ -78,6 +83,12 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     EjecutarReglasPendientes();
     requestAnimationFrame(medirOffsetsPantalla);
   }, [InicializarDatos, EjecutarReglasPendientes]);
+
+  React.useEffect(() => {
+    if (!onboardingGestosCompletado) {
+      setMostrarCoachMarks(true);
+    }
+  }, [onboardingGestosCompletado, solicitudAyudaRapida]);
 
 
   const medirOffsetsPantalla = (): void => {
@@ -191,7 +202,13 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     setNodoArrastrado(nodo);
     setObjetivoArrastre(null);
     setPunteroArrastre(null);
+    setEstadoSoltar(null);
     setAvisoReubicacion(`Arrastrando ${nodo.tipo} "${nodo.nombre}". Suelta sobre un grupo o sobre "Nivel raíz".`);
+  };
+
+  const cerrarCoachMarks = (): void => {
+    setMostrarCoachMarks(false);
+    MarcarOnboardingGestosCompletado(true);
   };
 
   const esDescendienteDeGrupo = (idGrupoObjetivo: string, idGrupoOrigen: string): boolean => {
@@ -266,9 +283,14 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
 
   const confirmarArrastre = (): void => {
     if (!nodoArrastrado || !objetivoArrastre) {
+      if (nodoArrastrado) {
+        setEstadoSoltar('invalido');
+        setAvisoReubicacion('Destino inválido. Inténtalo sobre un grupo o en nivel raíz.');
+      }
       setNodoArrastrado(null);
       setObjetivoArrastre(null);
       setPunteroArrastre(null);
+      setTimeout(() => setEstadoSoltar(null), 700);
       return;
     }
 
@@ -277,14 +299,17 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     if (nodoArrastrado.tipo === 'cuenta') {
       ReubicarCuenta(nodoArrastrado.id, idGrupoDestino);
       setAvisoReubicacion(`Cuenta "${nodoArrastrado.nombre}" reubicada.`);
+      setEstadoSoltar('valido');
     } else {
       const reubicado = ReubicarGrupo(nodoArrastrado.id, idGrupoDestino);
       setAvisoReubicacion(reubicado ? `Grupo "${nodoArrastrado.nombre}" reubicado.` : 'No se puede mover un grupo dentro de sí mismo o sus descendientes.');
+      setEstadoSoltar(reubicado ? 'valido' : 'invalido');
     }
 
     setNodoArrastrado(null);
     setObjetivoArrastre(null);
     setPunteroArrastre(null);
+    setTimeout(() => setEstadoSoltar(null), 700);
   };
 
   const RenderizarGrupoConContenido = (idGrupo: string, nivel = 0): React.JSX.Element[] => {
@@ -355,7 +380,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
   const cuentasRaiz = cuentasPorGrupo[CLAVE_CUENTAS_RAIZ] ?? [];
 
   return (
-    <View ref={vistaRaizRef} style={styles.contenedor} onLayout={medirOffsetsPantalla}>
+    <View ref={vistaRaizRef} style={[styles.contenedor, estadoSoltar === 'valido' ? styles.fondoSoltarValido : undefined, estadoSoltar === 'invalido' ? styles.fondoSoltarInvalido : undefined]} onLayout={medirOffsetsPantalla}>
       <Surface style={styles.tarjetaTotal} elevation={1}>
         <Text variant="labelLarge" style={styles.textoSecundario}>Total general</Text>
         <Text variant="headlineSmall" style={totalGeneral >= 0 ? styles.montoPositivo : styles.montoNegativo}>{FormatearMoneda(totalGeneral, moneda)}</Text>
@@ -468,6 +493,19 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
             <Button onPress={confirmarEliminacion}>Eliminar</Button>
           </Dialog.Actions>
         </Dialog>
+
+        <Dialog visible={mostrarCoachMarks} onDismiss={cerrarCoachMarks}>
+          <Dialog.Title>Guía rápida</Dialog.Title>
+          <Dialog.Content>
+            <Text>• Desliza una fila para editar o eliminar.</Text>
+            <Text>• Mantén presionado un grupo o cuenta para arrastrarlo.</Text>
+            <Text>• Suelta sobre un grupo o en "Nivel raíz" para reubicar.</Text>
+            <Text style={styles.textoAyudaSecundario}>Puedes volver a abrir esta ayuda desde el menú superior.</Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={cerrarCoachMarks}>Entendido</Button>
+          </Dialog.Actions>
+        </Dialog>
       </Portal>
 
       <Snackbar visible={mostrarAvisoGesto} onDismiss={() => setMostrarAvisoGesto(false)} duration={1800}>
@@ -534,6 +572,18 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 10,
     backgroundColor: '#FFFFFFEE'
+  },
+  fondoSoltarValido: {
+    borderWidth: 2,
+    borderColor: '#2D9A5C'
+  },
+  fondoSoltarInvalido: {
+    borderWidth: 2,
+    borderColor: '#D14141'
+  },
+  textoAyudaSecundario: {
+    marginTop: 10,
+    opacity: 0.7
   },
   accionesInferiores: {
     position: 'absolute',

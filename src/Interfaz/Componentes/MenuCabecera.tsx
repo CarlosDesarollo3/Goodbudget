@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { Appbar, Menu } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
+import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 
 type PropiedadesMenuCabecera = {
   navigation: NativeStackNavigationProp<ParametrosNavegacion>;
@@ -10,6 +11,7 @@ type PropiedadesMenuCabecera = {
 
 export const MenuCabecera = ({ navigation }: PropiedadesMenuCabecera): React.JSX.Element => {
   const [menuVisible, setMenuVisible] = useState(false);
+  const SolicitarAyudaRapida = UsarAlmacenAplicacion((estado) => estado.SolicitarAyudaRapida);
 
   return (
     <Menu
@@ -36,6 +38,14 @@ export const MenuCabecera = ({ navigation }: PropiedadesMenuCabecera): React.JSX
         }}
         title="Reglas recurrentes"
         leadingIcon="calendar-sync"
+      />
+      <Menu.Item
+        onPress={() => {
+          setMenuVisible(false);
+          SolicitarAyudaRapida();
+        }}
+        title="Ayuda rápida"
+        leadingIcon="lightbulb-on-outline"
       />
       <Menu.Item
         onPress={() => {

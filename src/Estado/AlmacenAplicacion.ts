@@ -14,6 +14,8 @@ interface EstadoAplicacion {
   reglas: ReglaRecurrente[];
   transaccionesPorCuenta: Record<string, Transaccion[]>;
   moneda: string;
+  onboardingGestosCompletado: boolean;
+  solicitudAyudaRapida: number;
   errorUi?: string;
   InicializarDatos(): void;
   CrearGrupo(nombre: string, idGrupoPadre: string | null): void;
@@ -32,6 +34,8 @@ interface EstadoAplicacion {
   CrearReglaRecurrente(regla: Omit<ReglaRecurrente, 'id' | 'frecuencia' | 'creadoEn'>): void;
   EjecutarReglasPendientes(): number;
   GuardarMoneda(moneda: string): void;
+  MarcarOnboardingGestosCompletado(completado: boolean): void;
+  SolicitarAyudaRapida(): void;
   ObtenerBalanceCuenta(idCuenta: string): number;
 }
 
@@ -47,6 +51,8 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
   reglas: [],
   transaccionesPorCuenta: {},
   moneda: 'MXN',
+  onboardingGestosCompletado: false,
+  solicitudAyudaRapida: 0,
 
   InicializarDatos: () => {
     InicializarBd();
@@ -60,8 +66,9 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     const categorias = repositorio.ListarCategorias();
     const reglas = repositorio.ListarReglas();
     const moneda = repositorio.ObtenerMoneda();
+    const onboardingGestosCompletado = repositorio.ObtenerValorConfiguracion('onboardingGestosCompletado') === '1';
 
-    set({ grupos, cuentasPorGrupo, categorias, reglas, moneda });
+    set({ grupos, cuentasPorGrupo, categorias, reglas, moneda, onboardingGestosCompletado });
   },
 
   CrearGrupo: (nombre, idGrupoPadre) => {
@@ -202,6 +209,19 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
   GuardarMoneda: (moneda) => {
     repositorio.GuardarMoneda(moneda);
     set({ moneda });
+  },
+
+  MarcarOnboardingGestosCompletado: (completado) => {
+    repositorio.GuardarValorConfiguracion('onboardingGestosCompletado', completado ? '1' : '0');
+    set({ onboardingGestosCompletado: completado });
+  },
+
+  SolicitarAyudaRapida: () => {
+    repositorio.GuardarValorConfiguracion('onboardingGestosCompletado', '0');
+    set((estado) => ({
+      onboardingGestosCompletado: false,
+      solicitudAyudaRapida: estado.solicitudAyudaRapida + 1
+    }));
   },
 
   ObtenerBalanceCuenta: (idCuenta) => {

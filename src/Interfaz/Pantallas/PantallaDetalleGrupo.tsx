@@ -36,7 +36,10 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
     RenombrarGrupo,
     EliminarCuenta,
     EliminarGrupo,
-    moneda
+    moneda,
+    onboardingGestosCompletado,
+    solicitudAyudaRapida,
+    MarcarOnboardingGestosCompletado
   } = UsarAlmacenAplicacion();
   const cuentas = cuentasPorGrupo[idGrupo] ?? [];
   const subgrupos = grupos.filter((grupo) => grupo.idGrupoPadre === idGrupo);
@@ -47,6 +50,18 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
   const [nombreTemporal, setNombreTemporal] = useState('');
   const [montoInicialTemporal, setMontoInicialTemporal] = useState('0');
   const [mostrarAvisoGesto, setMostrarAvisoGesto] = useState(false);
+  const [mostrarCoachMarks, setMostrarCoachMarks] = useState(false);
+
+  React.useEffect(() => {
+    if (!onboardingGestosCompletado) {
+      setMostrarCoachMarks(true);
+    }
+  }, [onboardingGestosCompletado, solicitudAyudaRapida]);
+
+  const cerrarCoachMarks = (): void => {
+    setMostrarCoachMarks(false);
+    MarcarOnboardingGestosCompletado(true);
+  };
 
   const abrirDialogoRenombrar = (nodo: NodoSeleccionado): void => {
     setNodoRenombrar(nodo);
@@ -202,6 +217,18 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
           <Dialog.Actions>
             <Button onPress={() => setNodoEliminar(null)}>Cancelar</Button>
             <Button onPress={confirmarEliminacion}>Eliminar</Button>
+          </Dialog.Actions>
+        </Dialog>
+
+        <Dialog visible={mostrarCoachMarks} onDismiss={cerrarCoachMarks}>
+          <Dialog.Title>Guía rápida</Dialog.Title>
+          <Dialog.Content>
+            <Text>• Desliza una fila para editar o eliminar.</Text>
+            <Text>• Mantén presionado en inicio para activar arrastre.</Text>
+            <Text>• Suelta sobre un grupo o en "Nivel raíz" para reubicar.</Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={cerrarCoachMarks}>Entendido</Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>
