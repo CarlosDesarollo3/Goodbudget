@@ -21,7 +21,10 @@ export const CalcularBalanceCuenta = (idCuenta: string, transacciones: Transacci
       case TipoTransaccion.GASTO:
         return transaccion.idCuentaOrigen === idCuenta ? acumulado - transaccion.monto : acumulado;
       case TipoTransaccion.INGRESO:
-        return transaccion.idCuentaDestino === idCuenta ? acumulado + transaccion.monto : acumulado;
+        if (transaccion.idCuentaDestino === idCuenta) {
+          return acumulado + transaccion.monto;
+        }
+        return transaccion.idCuentaOrigen === idCuenta ? acumulado + transaccion.monto : acumulado;
       default:
         return acumulado;
     }

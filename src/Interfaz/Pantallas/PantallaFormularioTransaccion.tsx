@@ -40,7 +40,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
           tipo: transaccionEditar.tipo === TipoTransaccion.AJUSTE ? TipoTransaccion.GASTO : transaccionEditar.tipo,
           monto: transaccionEditar.monto,
           idCuentaOrigen: transaccionEditar.idCuentaOrigen,
-          idCuentaDestino: transaccionEditar.idCuentaDestino,
+          idCuentaDestino: transaccionEditar.idCuentaDestino ?? transaccionEditar.idCuentaOrigen,
           idCategoria: transaccionEditar.idCategoria,
           nota: transaccionEditar.nota,
           fecha: transaccionEditar.fecha
@@ -65,8 +65,21 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
       return;
     }
 
-    if ((tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.INGRESO) && !cuentaOrigenSeleccionada) {
-      setValue('idCuentaOrigen', idCuentaPredeterminada ?? cuentas[0]?.id, { shouldValidate: true });
+    if (tipoSeleccionado === TipoTransaccion.GASTO) {
+      if (!cuentaOrigenSeleccionada) {
+        setValue('idCuentaOrigen', idCuentaPredeterminada ?? cuentas[0]?.id, { shouldValidate: true });
+      }
+      setValue('idCuentaDestino', undefined, { shouldValidate: false });
+      return;
+    }
+
+    if (tipoSeleccionado === TipoTransaccion.INGRESO) {
+      const destinoSugerido = cuentaDestinoSeleccionada ?? cuentaOrigenSeleccionada ?? idCuentaPredeterminada ?? cuentas[0]?.id;
+      if (cuentaDestinoSeleccionada !== destinoSugerido) {
+        setValue('idCuentaDestino', destinoSugerido, { shouldValidate: true });
+      }
+      setValue('idCuentaOrigen', undefined, { shouldValidate: false });
+      return;
     }
 
     if (tipoSeleccionado === TipoTransaccion.TRANSFERENCIA) {
@@ -76,19 +89,12 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
       }
 
       if (!cuentaDestinoSeleccionada || cuentaDestinoSeleccionada === origenSugerido) {
-        const destinoSugerido = cuentas.find((cuenta) => cuenta.id !== origenSugerido)?.id;
-        if (cuentaDestinoSeleccionada !== destinoSugerido) {
-          setValue('idCuentaDestino', destinoSugerido, { shouldValidate: true });
+        const destinoAlterno = cuentas.find((cuenta) => cuenta.id !== origenSugerido)?.id;
+        if (cuentaDestinoSeleccionada !== destinoAlterno) {
+          setValue('idCuentaDestino', destinoAlterno, { shouldValidate: true });
         }
       }
-      return;
-    }
 
-    if (tipoSeleccionado !== TipoTransaccion.TRANSFERENCIA) {
-      setValue('idCuentaDestino', undefined, { shouldValidate: false });
-    }
-
-    if (tipoSeleccionado === TipoTransaccion.TRANSFERENCIA) {
       setValue('idCategoria', undefined, { shouldValidate: false });
     }
   }, [tipoSeleccionado, cuentaOrigenSeleccionada, cuentaDestinoSeleccionada, setValue, cuentas, idCuentaPredeterminada]);
@@ -106,8 +112,8 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
   };
 
   const requiereCategoria = tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.INGRESO;
-  const requiereCuentaOrigen = tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.INGRESO || tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
-  const requiereCuentaDestino = tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
+  const requiereCuentaOrigen = tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
+  const requiereCuentaDestino = tipoSeleccionado === TipoTransaccion.INGRESO || tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
   const montoMostrado = montoCapturado ?? 0;
   const montoConSigno = tipoSeleccionado === TipoTransaccion.GASTO ? -Math.abs(montoMostrado) : Math.abs(montoMostrado);
 
