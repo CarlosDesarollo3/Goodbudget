@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Dialog, Portal, Snackbar, Text, TextInput } from 'react-native-paper';
+import { Button, Dialog, Portal, Snackbar, Text } from 'react-native-paper';
+import { InputConCerrarTeclado } from '@/Interfaz/Componentes/InputConCerrarTeclado';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { TarjetaCuenta } from '@/Interfaz/Componentes/TarjetaCuenta';
@@ -179,9 +180,9 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
         <Dialog visible={Boolean(creacionPendiente)} onDismiss={() => setCreacionPendiente(null)}>
           <Dialog.Title>{creacionPendiente?.tipo === 'cuenta' ? 'Nueva cuenta' : 'Nuevo subgrupo'}</Dialog.Title>
           <Dialog.Content>
-            <TextInput value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre (opcional)" autoFocus />
+            <InputConCerrarTeclado value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre (opcional)" autoFocus />
             {creacionPendiente?.tipo === 'cuenta' ? (
-              <TextInput
+              <InputConCerrarTeclado
                 value={montoInicialTemporal}
                 onChangeText={setMontoInicialTemporal}
                 mode="outlined"
@@ -200,7 +201,7 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
         <Dialog visible={Boolean(nodoRenombrar)} onDismiss={() => setNodoRenombrar(null)}>
           <Dialog.Title>Renombrar {nodoRenombrar?.tipo}</Dialog.Title>
           <Dialog.Content>
-            <TextInput value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre" autoFocus />
+            <InputConCerrarTeclado value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre" autoFocus />
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={() => setNodoRenombrar(null)}>Cancelar</Button>
