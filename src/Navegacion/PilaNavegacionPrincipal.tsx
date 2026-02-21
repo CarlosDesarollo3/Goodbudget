@@ -1,8 +1,11 @@
 import React from 'react';
-import { NavigationContainer, DarkTheme as TemaNavegacionOscuro, DefaultTheme as TemaNavegacionClaro, Theme as TemaNavegacion } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme as TemaNavegacionOscuro, DefaultTheme as TemaNavegacionClaro, NavigationContainerRef, Theme as TemaNavegacion } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { StyleSheet, View } from 'react-native';
+import { FAB } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ParametrosNavegacion, ParametrosPestanasPrincipal } from './TiposNavegacion';
 import { PantallaInicio } from '@/Interfaz/Pantallas/PantallaInicio';
 import { PantallaDetalleGrupo } from '@/Interfaz/Pantallas/PantallaDetalleGrupo';
@@ -14,6 +17,11 @@ import { PantallaConfiguracion } from '@/Interfaz/Pantallas/PantallaConfiguracio
 import { PantallaAnalitica } from '@/Interfaz/Pantallas/PantallaAnalitica';
 import { MenuCabecera } from '@/Interfaz/Componentes/MenuCabecera';
 import { TemaAplicacion } from '@/Interfaz/Tema/temaAplicacion';
+import { TipoTransaccion } from '@/Dominio/Modelos';
+import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
+
+const CLAVE_ULTIMA_CUENTA = 'ultimaCuentaUsada';
+const CLAVE_ULTIMA_CATEGORIA = 'ultimaCategoriaUsada';
 
 const Pila = createNativeStackNavigator<ParametrosNavegacion>();
 const Pestanas = createBottomTabNavigator<ParametrosPestanasPrincipal>();
@@ -62,50 +70,151 @@ const CrearTemaNavegacion = (tema: TemaAplicacion): TemaNavegacion => ({
   }
 });
 
-export const PilaNavegacionPrincipal = ({ tema }: PropsPilaNavegacionPrincipal): React.JSX.Element => {
-  const temaNavegacion = CrearTemaNavegacion(tema);
+const rutasSinAccionRapida: Array<keyof ParametrosNavegacion> = ['PantallaFormularioTransaccion'];
+
+const ObtenerNombreRutaActiva = (estado: any): keyof ParametrosNavegacion | undefined => {
+  if (!estado || !stateHasRoutes(estado)) {
+    return undefined;
+  }
+
+  const rutaActiva = estado.routes[estado.index ?? 0];
+  if (!rutaActiva) {
+    return undefined;
+  }
+
+  if (rutaActiva.state) {
+    return ObtenerNombreRutaActiva(rutaActiva.state);
+  }
+
+  return rutaActiva.name as keyof ParametrosNavegacion;
+};
+
+const stateHasRoutes = (estado: any): estado is { routes: unknown[]; index?: number } => Array.isArray(estado.routes);
+
+const AccionRapidaGlobal = ({
+  navigationRef,
+  rutaActiva,
+  tema
+}: {
+  navigationRef: React.RefObject<NavigationContainerRef<ParametrosNavegacion>>;
+  rutaActiva?: keyof ParametrosNavegacion;
+  tema: TemaAplicacion;
+}): React.JSX.Element | null => {
+  const insets = useSafeAreaInsets();
+  const [expandido, setExpandido] = React.useState(false);
+  const { ObtenerValorConfiguracion } = UsarAlmacenAplicacion();
+
+  React.useEffect(() => {
+    if (!rutasSinAccionRapida.includes(rutaActiva ?? 'PantallaPestanasPrincipal')) {
+      return;
+    }
+
+    setExpandido(false);
+  }, [rutaActiva]);
+
+  if (rutasSinAccionRapida.includes(rutaActiva ?? 'PantallaPestanasPrincipal')) {
+    return null;
+  }
+
+  const navegarFormulario = (tipoPredeterminado?: TipoTransaccion): void => {
+    const idCuentaPredeterminada = ObtenerValorConfiguracion(CLAVE_ULTIMA_CUENTA) ?? undefined;
+    const idCategoriaPredeterminada = ObtenerValorConfiguracion(CLAVE_ULTIMA_CATEGORIA) ?? undefined;
+    navigationRef.current?.navigate('PantallaFormularioTransaccion', {
+      idCuentaPredeterminada,
+      idCategoriaPredeterminada,
+      tipoPredeterminado
+    });
+    setExpandido(false);
+  };
 
   return (
-    <NavigationContainer theme={temaNavegacion}>
-      <Pila.Navigator
-        screenOptions={({ navigation }) => ({
-          headerStyle: { backgroundColor: tema.colors.surface },
-          headerTintColor: tema.colors.onSurface,
-          headerTitleStyle: { fontWeight: '700' },
-          headerRight: () => <MenuCabecera navigation={navigation} />
-        })}
-      >
-        <Pila.Screen
-          name="PantallaPestanasPrincipal"
-          component={NavegacionPestanasPrincipal}
-          options={{ headerShown: false }}
-        />
-        <Pila.Screen
-          name="PantallaDetalleGrupo"
-          component={PantallaDetalleGrupo}
-          options={({ navigation }) => ({ title: 'Detalle de Grupo', headerRight: () => <MenuCabecera navigation={navigation} /> })}
-        />
-        <Pila.Screen
-          name="PantallaDetalleCuenta"
-          component={PantallaDetalleCuenta}
-          options={({ navigation }) => ({ title: 'Detalle de Cuenta', headerRight: () => <MenuCabecera navigation={navigation} /> })}
-        />
-        <Pila.Screen
-          name="PantallaFormularioTransaccion"
-          component={PantallaFormularioTransaccion}
-          options={({ route, navigation }) => {
-            const editando = Boolean((route.params as { transaccion?: unknown } | undefined)?.transaccion);
-            return {
-              title: editando ? 'Editar transacción' : 'Nueva transacción',
-              headerRight: () => <MenuCabecera navigation={navigation} />
-            };
-          }}
-        />
-        <Pila.Screen name="PantallaCategorias" component={PantallaCategorias} options={{ title: 'Categorías' }} />
-        <Pila.Screen name="PantallaReglasRecurrentes" component={PantallaReglasRecurrentes} options={{ title: 'Reglas Recurrentes' }} />
-        <Pila.Screen name="PantallaAnalitica" component={PantallaAnalitica} options={{ title: 'Analítica' }} />
-        <Pila.Screen name="PantallaConfiguracion" component={PantallaConfiguracion} options={{ title: 'Configuración' }} />
-      </Pila.Navigator>
-    </NavigationContainer>
+    <View pointerEvents="box-none" style={[styles.accionesRapidasContenedor, { bottom: 16 + insets.bottom + 56 }]}>
+      <FAB.Group
+        open={expandido}
+        visible
+        icon={expandido ? 'close' : 'plus'}
+        color={tema.colors.onPrimary}
+        fabStyle={{ backgroundColor: tema.colors.primary }}
+        backdropColor="transparent"
+        actions={[
+          { icon: 'arrow-up-bold-circle-outline', label: 'Ingreso', onPress: () => navegarFormulario(TipoTransaccion.INGRESO) },
+          { icon: 'swap-horizontal', label: 'Transferencia', onPress: () => navegarFormulario(TipoTransaccion.TRANSFERENCIA) },
+          { icon: 'arrow-down-bold-circle-outline', label: 'Gasto', onPress: () => navegarFormulario(TipoTransaccion.GASTO) }
+        ]}
+        onStateChange={({ open }) => setExpandido(open)}
+      />
+    </View>
   );
 };
+
+export const PilaNavegacionPrincipal = ({ tema }: PropsPilaNavegacionPrincipal): React.JSX.Element => {
+  const temaNavegacion = CrearTemaNavegacion(tema);
+  const navigationRef = React.useRef<NavigationContainerRef<ParametrosNavegacion>>(null);
+  const [rutaActiva, setRutaActiva] = React.useState<keyof ParametrosNavegacion>('PantallaPestanasPrincipal');
+
+  const actualizarRutaActiva = React.useCallback(() => {
+    const estado = navigationRef.current?.getRootState();
+    const siguienteRuta = ObtenerNombreRutaActiva(estado);
+    if (siguienteRuta) {
+      setRutaActiva(siguienteRuta);
+    }
+  }, []);
+
+  return (
+    <View style={styles.contenedorNavegacion}>
+      <NavigationContainer ref={navigationRef} theme={temaNavegacion} onReady={actualizarRutaActiva} onStateChange={actualizarRutaActiva}>
+        <Pila.Navigator
+          screenOptions={({ navigation }) => ({
+            headerStyle: { backgroundColor: tema.colors.surface },
+            headerTintColor: tema.colors.onSurface,
+            headerTitleStyle: { fontWeight: '700' },
+            headerRight: () => <MenuCabecera navigation={navigation} />
+          })}
+        >
+          <Pila.Screen
+            name="PantallaPestanasPrincipal"
+            component={NavegacionPestanasPrincipal}
+            options={{ headerShown: false }}
+          />
+          <Pila.Screen
+            name="PantallaDetalleGrupo"
+            component={PantallaDetalleGrupo}
+            options={({ navigation }) => ({ title: 'Detalle de Grupo', headerRight: () => <MenuCabecera navigation={navigation} /> })}
+          />
+          <Pila.Screen
+            name="PantallaDetalleCuenta"
+            component={PantallaDetalleCuenta}
+            options={({ navigation }) => ({ title: 'Detalle de Cuenta', headerRight: () => <MenuCabecera navigation={navigation} /> })}
+          />
+          <Pila.Screen
+            name="PantallaFormularioTransaccion"
+            component={PantallaFormularioTransaccion}
+            options={({ route, navigation }) => {
+              const editando = Boolean((route.params as { transaccion?: unknown } | undefined)?.transaccion);
+              return {
+                title: editando ? 'Editar transacción' : 'Nueva transacción',
+                headerRight: () => <MenuCabecera navigation={navigation} />
+              };
+            }}
+          />
+          <Pila.Screen name="PantallaCategorias" component={PantallaCategorias} options={{ title: 'Categorías' }} />
+          <Pila.Screen name="PantallaReglasRecurrentes" component={PantallaReglasRecurrentes} options={{ title: 'Reglas Recurrentes' }} />
+          <Pila.Screen name="PantallaAnalitica" component={PantallaAnalitica} options={{ title: 'Analítica' }} />
+          <Pila.Screen name="PantallaConfiguracion" component={PantallaConfiguracion} options={{ title: 'Configuración' }} />
+        </Pila.Navigator>
+      </NavigationContainer>
+      <AccionRapidaGlobal navigationRef={navigationRef} rutaActiva={rutaActiva} tema={tema} />
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  contenedorNavegacion: {
+    flex: 1
+  },
+  accionesRapidasContenedor: {
+    position: 'absolute',
+    right: 0,
+    left: 0
+  }
+});
