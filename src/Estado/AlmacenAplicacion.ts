@@ -32,6 +32,8 @@ interface EstadoAplicacion {
   CrearReglaRecurrente(regla: Omit<ReglaRecurrente, 'id' | 'frecuencia' | 'creadoEn'>): void;
   EjecutarReglasPendientes(): number;
   GuardarMoneda(moneda: string): void;
+  ObtenerValorConfiguracion(clave: string): string | null;
+  GuardarValorConfiguracion(clave: string, valor?: string): void;
   ObtenerBalanceCuenta(idCuenta: string): number;
 }
 
@@ -202,6 +204,12 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
   GuardarMoneda: (moneda) => {
     repositorio.GuardarMoneda(moneda);
     set({ moneda });
+  },
+
+  ObtenerValorConfiguracion: (clave) => repositorio.ObtenerValorConfiguracion(clave),
+
+  GuardarValorConfiguracion: (clave, valor) => {
+    repositorio.GuardarValorConfiguracion(clave, valor);
   },
 
   ObtenerBalanceCuenta: (idCuenta) => {

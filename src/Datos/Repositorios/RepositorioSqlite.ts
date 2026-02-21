@@ -249,11 +249,24 @@ export class RepositorioSqlite
   }
 
   ObtenerMoneda(): string {
-    const fila = this.bd.getFirstSync<{ valor: string }>('SELECT valor FROM configuracion WHERE clave = ?', ['moneda']);
-    return fila?.valor ?? 'MXN';
+    return this.ObtenerValorConfiguracion('moneda') ?? 'MXN';
   }
 
   GuardarMoneda(moneda: string): void {
-    this.bd.runSync('INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?,?)', ['moneda', moneda]);
+    this.GuardarValorConfiguracion('moneda', moneda);
+  }
+
+  ObtenerValorConfiguracion(clave: string): string | null {
+    const fila = this.bd.getFirstSync<{ valor: string }>('SELECT valor FROM configuracion WHERE clave = ?', [clave]);
+    return fila?.valor ?? null;
+  }
+
+  GuardarValorConfiguracion(clave: string, valor?: string): void {
+    if (!valor) {
+      this.bd.runSync('DELETE FROM configuracion WHERE clave = ?', [clave]);
+      return;
+    }
+
+    this.bd.runSync('INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?,?)', [clave, valor]);
   }
 }

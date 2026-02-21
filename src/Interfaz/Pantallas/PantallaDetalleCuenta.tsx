@@ -75,6 +75,7 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
               idCuentaContexto={idCuenta}
               moneda={moneda}
               onPress={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
+              onDuplicar={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion, duplicar: true })}
             />
           </FilaDeslizableAcciones>
         ))}
