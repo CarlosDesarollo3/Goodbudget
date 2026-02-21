@@ -17,15 +17,12 @@ import { EstadoVacioLista } from '@/Interfaz/Componentes/EstadoVacioLista';
 
 const repositorio = new RepositorioSqlite();
 type FiltroTipoTransaccion = 'TODOS' | TipoTransaccion.GASTO | TipoTransaccion.INGRESO | TipoTransaccion.TRANSFERENCIA;
+type PresetRangoFecha = 'SIN_RANGO' | '7_DIAS' | '30_DIAS' | 'MES_ACTUAL';
 
 const ParsearFechaFiltro = (valor: string, finDeDia = false): number | null => {
   const valorNormalizado = valor.trim();
 
-  if (!valorNormalizado) {
-    return null;
-  }
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(valorNormalizado)) {
+  if (!valorNormalizado || !/^\d{4}-\d{2}-\d{2}$/.test(valorNormalizado)) {
     return null;
   }
 
@@ -45,6 +42,9 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
   const [filtroTipo, setFiltroTipo] = React.useState<FiltroTipoTransaccion>('TODOS');
   const [fechaDesde, setFechaDesde] = React.useState('');
   const [fechaHasta, setFechaHasta] = React.useState('');
+  const [presetRangoFecha, setPresetRangoFecha] = React.useState<PresetRangoFecha>('SIN_RANGO');
+  const [mostrarFiltros, setMostrarFiltros] = React.useState(false);
+  const [mostrarObjetivos, setMostrarObjetivos] = React.useState(false);
   const [transaccionEliminar, setTransaccionEliminar] = React.useState<Transaccion | null>(null);
   const [mostrarAvisoGesto, setMostrarAvisoGesto] = React.useState(false);
   const [avisoObjetivo, setAvisoObjetivo] = React.useState<string | null>(null);
@@ -71,6 +71,54 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
     }, {});
   }, [categorias]);
 
+  const limpiarFiltros = React.useCallback((): void => {
+    setBusqueda('');
+    setFiltroTipo('TODOS');
+    setFechaDesde('');
+    setFechaHasta('');
+    setPresetRangoFecha('SIN_RANGO');
+  }, []);
+
+  const aplicarPresetFecha = React.useCallback((preset: PresetRangoFecha): void => {
+    setPresetRangoFecha(preset);
+
+    if (preset === 'SIN_RANGO') {
+      setFechaDesde('');
+      setFechaHasta('');
+      return;
+    }
+
+    const hoy = new Date();
+    let inicio = new Date();
+
+    if (preset === '7_DIAS') {
+      inicio.setDate(hoy.getDate() - 6);
+    } else if (preset === '30_DIAS') {
+      inicio.setDate(hoy.getDate() - 29);
+    } else {
+      inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    }
+
+    setFechaDesde(format(inicio, 'yyyy-MM-dd'));
+    setFechaHasta(format(hoy, 'yyyy-MM-dd'));
+  }, []);
+
+  const descripcionRangoActivo = React.useMemo(() => {
+    if (!fechaDesde && !fechaHasta) {
+      return 'Sin rango de fechas';
+    }
+
+    const inicio = ParsearFechaFiltro(fechaDesde);
+    const fin = ParsearFechaFiltro(fechaHasta, true);
+    const formatearNatural = (timestamp: number): string => format(new Date(timestamp), "d 'de' MMMM yyyy", { locale: es });
+
+    if (inicio && fin) {
+      return `Desde ${formatearNatural(inicio)} hasta ${formatearNatural(fin)}`;
+    }
+
+    return 'Rango de fechas activo';
+  }, [fechaDesde, fechaHasta]);
+
   const transaccionesFiltradas = React.useMemo(() => {
     const terminoBusqueda = busqueda.trim().toLowerCase();
     const inicio = ParsearFechaFiltro(fechaDesde);
@@ -80,9 +128,7 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
       const nota = transaccion.nota?.toLowerCase() ?? '';
       const categoria = (transaccion.idCategoria ? categoriasPorId[transaccion.idCategoria] : '')?.toLowerCase() ?? '';
       const coincideBusqueda = !terminoBusqueda || nota.includes(terminoBusqueda) || categoria.includes(terminoBusqueda);
-
       const coincideTipo = filtroTipo === 'TODOS' || transaccion.tipo === filtroTipo;
-
       const fechaTransaccion = new Date(transaccion.fecha).getTime();
       const coincideFechaInicio = inicio === null || fechaTransaccion >= inicio;
       const coincideFechaFin = fin === null || fechaTransaccion <= fin;
@@ -133,7 +179,6 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
     }
   }, [avances]);
 
-
   const abrirDialogoObjetivo = (): void => {
     setCategoriaObjetivoSeleccionada(categorias[0]?.id ?? null);
     setMontoObjetivo('');
@@ -179,83 +224,96 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
 
   return (
     <View style={styles.contenedor}>
-      <Surface style={styles.tarjetaTotal} elevation={1}>
-        <Text variant="labelLarge" style={styles.textoSecundario}>Balance</Text>
-        <Text variant="headlineSmall" style={balanceCuenta >= 0 ? styles.montoPositivo : styles.montoNegativo}>
-          {FormatearMoneda(balanceCuenta, moneda)}
-        </Text>
-      </Surface>
-
-      <Surface style={styles.tarjetaFiltros} elevation={1}>
-        <Text variant="labelLarge" style={styles.textoSecundario}>Buscar y filtrar movimientos</Text>
-        <Searchbar
-          placeholder="Buscar por nota o categoría"
-          value={busqueda}
-          onChangeText={setBusqueda}
-          style={styles.buscador}
-        />
-
-        <View style={styles.segmentosTipo}>
-          {(['TODOS', TipoTransaccion.GASTO, TipoTransaccion.INGRESO, TipoTransaccion.TRANSFERENCIA] as const).map((tipo) => (
-            <Chip
-              key={tipo}
-              selected={filtroTipo === tipo}
-              onPress={() => setFiltroTipo(tipo)}
-              compact
-            >
-              {tipo === 'TODOS' ? 'Todos' : tipo}
-            </Chip>
-          ))}
-        </View>
-
-        <View style={styles.filaFechas}>
-          <TextInput
-            style={styles.inputFecha}
-            mode="outlined"
-            dense
-            value={fechaDesde}
-            onChangeText={setFechaDesde}
-            label="Desde (AAAA-MM-DD)"
-            placeholder="2026-01-01"
-          />
-          <TextInput
-            style={styles.inputFecha}
-            mode="outlined"
-            dense
-            value={fechaHasta}
-            onChangeText={setFechaHasta}
-            label="Hasta (AAAA-MM-DD)"
-            placeholder="2026-12-31"
-          />
-        </View>
-
-        <View style={styles.filaResumenFiltros}>
-          <Text variant="bodySmall" style={styles.textoSecundario}>
-            Mostrando {transaccionesFiltradas.length} de {transacciones.length} movimientos
+      <ScrollView
+        contentContainerStyle={[styles.contenidoPrincipal, { paddingBottom: 120 + insets.bottom }]}
+        onStartShouldSetResponder={() => {
+          CerrarFilaAbierta();
+          return false;
+        }}
+      >
+        <Surface style={styles.tarjetaTotal} elevation={1}>
+          <Text variant="labelLarge" style={styles.textoSecundario}>Balance</Text>
+          <Text variant="headlineSmall" style={balanceCuenta >= 0 ? styles.montoPositivo : styles.montoNegativo}>
+            {FormatearMoneda(balanceCuenta, moneda)}
           </Text>
-          <Button
-            compact
-            onPress={() => {
-              setBusqueda('');
-              setFiltroTipo('TODOS');
-              setFechaDesde('');
-              setFechaHasta('');
-            }}
-          >
-            Limpiar
-          </Button>
-        </View>
-      </Surface>
+        </Surface>
 
-      <Surface style={styles.tarjetaTotal} elevation={1}>
-        <View style={styles.filaTituloObjetivos}>
-          <Text variant="labelLarge" style={styles.textoSecundario}>Objetivos de presupuesto</Text>
-          <Button compact mode="text" onPress={abrirDialogoObjetivo}>Crear</Button>
-        </View>
-        {avances.length === 0 ? (
-          <Text variant="bodySmall" style={styles.textoSecundario}>Sin objetivos configurados para esta cuenta.</Text>
-        ) : (
-          avances.map((avance) => {
+        <Surface style={styles.tarjetaFiltros} elevation={1}>
+          <View style={styles.encabezadoTarjeta}>
+            <Text variant="labelLarge" style={styles.textoSecundario}>Filtros</Text>
+            <Button compact onPress={() => setMostrarFiltros((anterior) => !anterior)}>
+              {mostrarFiltros ? 'Ocultar' : 'Mostrar'}
+            </Button>
+          </View>
+
+          <Text variant="bodySmall" style={styles.textoSecundario}>{descripcionRangoActivo}</Text>
+
+          {mostrarFiltros && (
+            <>
+              <Searchbar
+                placeholder="Buscar por nota o categoría"
+                value={busqueda}
+                onChangeText={setBusqueda}
+                style={styles.buscador}
+              />
+
+              <View style={styles.segmentosTipo}>
+                {(['TODOS', TipoTransaccion.GASTO, TipoTransaccion.INGRESO, TipoTransaccion.TRANSFERENCIA] as const).map((tipo) => (
+                  <Chip
+                    key={tipo}
+                    selected={filtroTipo === tipo}
+                    onPress={() => setFiltroTipo(tipo)}
+                    compact
+                  >
+                    {tipo === 'TODOS' ? 'Todos' : tipo}
+                  </Chip>
+                ))}
+              </View>
+
+              <View style={styles.segmentosTipo}>
+                {([
+                  { id: 'SIN_RANGO', etiqueta: 'Sin rango' },
+                  { id: '7_DIAS', etiqueta: '7 días' },
+                  { id: '30_DIAS', etiqueta: '30 días' },
+                  { id: 'MES_ACTUAL', etiqueta: 'Mes actual' }
+                ] as const).map((preset) => (
+                  <Chip
+                    key={preset.id}
+                    selected={presetRangoFecha === preset.id}
+                    onPress={() => aplicarPresetFecha(preset.id)}
+                    compact
+                  >
+                    {preset.etiqueta}
+                  </Chip>
+                ))}
+              </View>
+            </>
+          )}
+
+          <View style={styles.filaResumenFiltros}>
+            <Text variant="bodySmall" style={styles.textoSecundario}>
+              Mostrando {transaccionesFiltradas.length} de {transacciones.length}
+            </Text>
+            <Button compact mode="outlined" onPress={limpiarFiltros}>Limpiar filtros</Button>
+          </View>
+        </Surface>
+
+        <Surface style={styles.tarjetaObjetivos} elevation={1}>
+          <View style={styles.encabezadoTarjeta}>
+            <Text variant="labelLarge" style={styles.textoSecundario}>Objetivos de presupuesto</Text>
+            <View style={styles.filaAccionesObjetivos}>
+              <Button compact onPress={() => setMostrarObjetivos((anterior) => !anterior)}>
+                {mostrarObjetivos ? 'Ocultar' : 'Ver'}
+              </Button>
+              <Button compact mode="text" onPress={abrirDialogoObjetivo}>Crear</Button>
+            </View>
+          </View>
+
+          <Text variant="bodySmall" style={styles.textoSecundario}>
+            {avances.length === 0 ? 'Sin objetivos configurados.' : `${avances.length} objetivos activos en esta cuenta.`}
+          </Text>
+
+          {mostrarObjetivos && avances.length > 0 && avances.map((avance) => {
             const categoria = categorias.find((item) => item.id === avance.objetivo.idCategoria)?.nombre ?? avance.objetivo.idCategoria;
             const progreso = Math.max(0, Math.min(avance.progreso, 1));
             return (
@@ -267,17 +325,9 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
                 </Text>
               </View>
             );
-          })
-        )}
-      </Surface>
+          })}
+        </Surface>
 
-      <ScrollView
-        contentContainerStyle={[styles.listaContenedora, { paddingBottom: 100 + insets.bottom }]}
-        onStartShouldSetResponder={() => {
-          CerrarFilaAbierta();
-          return false;
-        }}
-      >
         {transaccionesFiltradas.length === 0 ? (
           <EstadoVacioLista
             icono="text-box-search-outline"
@@ -292,10 +342,7 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
                 return;
               }
 
-              setBusqueda('');
-              setFiltroTipo('TODOS');
-              setFechaDesde('');
-              setFechaHasta('');
+              limpiarFiltros();
             }}
           />
         ) : (
@@ -326,7 +373,7 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
         )}
       </ScrollView>
 
-      <View style={[styles.accionesInferiores, { bottom: 12 + insets.bottom }]}>
+      <View style={[styles.accionesInferiores, { bottom: 12 + insets.bottom }]}> 
         <Button
           mode="contained"
           style={styles.botonAccion}
@@ -350,7 +397,6 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
       </View>
 
       <Portal>
-
         <Dialog visible={mostrarDialogoObjetivo} onDismiss={() => setMostrarDialogoObjetivo(false)}>
           <Dialog.Title>Nuevo objetivo</Dialog.Title>
           <Dialog.Content>
@@ -408,31 +454,41 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     backgroundColor: '#F2F5F9'
   },
+  contenidoPrincipal: {
+    gap: 10
+  },
   tarjetaTotal: {
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    padding: 14,
     backgroundColor: '#FFFFFF'
   },
   tarjetaFiltros: {
     borderRadius: 16,
-    padding: 12,
-    marginBottom: 12,
-    gap: 10,
+    padding: 10,
+    gap: 8,
     backgroundColor: '#FFFFFF'
+  },
+  tarjetaObjetivos: {
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 6,
+    backgroundColor: '#FFFFFF'
+  },
+  encabezadoTarjeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  filaAccionesObjetivos: {
+    flexDirection: 'row',
+    alignItems: 'center'
   },
   segmentosTipo: {
     marginTop: 2,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8
-  },
-  filaFechas: {
-    flexDirection: 'row',
-    gap: 8
-  },
-  inputFecha: {
-    flex: 1
   },
   textoSecundario: {
     opacity: 0.75,
@@ -447,7 +503,7 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   bloqueMes: {
-    marginTop: 10
+    marginTop: 6
   },
   tituloMes: {
     marginBottom: 6,
@@ -458,11 +514,6 @@ const styles = StyleSheet.create({
   },
   montoNegativo: {
     color: '#C4362D'
-  },
-  filaTituloObjetivos: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
   },
   ayudaObjetivo: {
     marginBottom: 8,
@@ -482,14 +533,13 @@ const styles = StyleSheet.create({
     marginTop: 8
   },
   bloqueObjetivo: {
-    marginTop: 8,
+    marginTop: 6,
     gap: 4
   },
   barraObjetivo: {
     height: 8,
     borderRadius: 8
   },
-  listaContenedora: {},
   accionesInferiores: {
     position: 'absolute',
     left: 16,
