@@ -4,8 +4,7 @@ import { Transaccion } from '@/Dominio/Modelos';
 export type ParametrosPestanasPrincipal = {
   PantallaInicio: undefined;
   PantallaCategorias: undefined;
-  PantallaReglasRecurrentes: undefined;
-  PantallaConfiguracion: undefined;
+  PantallaAnalitica: undefined;
 };
 
 export type ParametrosNavegacion = {

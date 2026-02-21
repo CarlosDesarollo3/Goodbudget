@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Dialog, Portal, ProgressBar, Surface, Text } from 'react-native-paper';
+import { Button, Chip, Dialog, Portal, ProgressBar, Surface, Text, TextInput } from 'react-native-paper';
 import { FormatearMoneda } from '@/Utilidades/Formatos';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -37,7 +37,7 @@ const ParsearFechaFiltro = (valor: string, finDeDia = false): number | null => {
 
 export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaDetalleCuenta'>): React.JSX.Element => {
   const { idCuenta } = route.params;
-  const { ObtenerBalanceCuenta, moneda, ConvertirCuentaEnGrupo, EliminarTransaccion, ListarAvancesObjetivos, categorias } = UsarAlmacenAplicacion();
+  const { ObtenerBalanceCuenta, moneda, ConvertirCuentaEnGrupo, EliminarTransaccion, ListarAvancesObjetivos, categorias, CrearObjetivoPresupuesto } = UsarAlmacenAplicacion();
   const insets = useSafeAreaInsets();
   const [transacciones, setTransacciones] = React.useState<Transaccion[]>([]);
   const [busqueda, setBusqueda] = React.useState('');
@@ -47,6 +47,11 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
   const [transaccionEliminar, setTransaccionEliminar] = React.useState<Transaccion | null>(null);
   const [mostrarAvisoGesto, setMostrarAvisoGesto] = React.useState(false);
   const [avisoObjetivo, setAvisoObjetivo] = React.useState<string | null>(null);
+
+  const [mostrarDialogoObjetivo, setMostrarDialogoObjetivo] = React.useState(false);
+  const [categoriaObjetivoSeleccionada, setCategoriaObjetivoSeleccionada] = React.useState<string | null>(null);
+  const [montoObjetivo, setMontoObjetivo] = React.useState('');
+  const [errorObjetivo, setErrorObjetivo] = React.useState<string | null>(null);
 
   const recargarTransacciones = React.useCallback((): void => {
     setTransacciones(repositorio.ListarTransaccionesPorCuenta(idCuenta));
@@ -127,6 +132,40 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
     }
   }, [avances]);
 
+
+  const abrirDialogoObjetivo = (): void => {
+    setCategoriaObjetivoSeleccionada(categorias[0]?.id ?? null);
+    setMontoObjetivo('');
+    setErrorObjetivo(null);
+    setMostrarDialogoObjetivo(true);
+  };
+
+  const guardarObjetivo = (): void => {
+    if (!categoriaObjetivoSeleccionada) {
+      setErrorObjetivo('Selecciona una categoría para el objetivo.');
+      return;
+    }
+
+    const monto = Number(montoObjetivo.replace(',', '.'));
+
+    if (!Number.isFinite(monto) || monto <= 0) {
+      setErrorObjetivo('Ingresa un monto mensual válido mayor que cero.');
+      return;
+    }
+
+    CrearObjetivoPresupuesto({
+      idCuenta,
+      idCategoria: categoriaObjetivoSeleccionada,
+      montoMensual: monto,
+      umbralAlerta: 0.8,
+      rolloverHabilitado: false,
+      activo: true
+    });
+
+    setMostrarDialogoObjetivo(false);
+    setErrorObjetivo(null);
+  };
+
   const confirmarEliminacion = (): void => {
     if (!transaccionEliminar) {
       return;
@@ -147,7 +186,10 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
       </Surface>
 
       <Surface style={styles.tarjetaTotal} elevation={1}>
-        <Text variant="labelLarge" style={styles.textoSecundario}>Objetivos de presupuesto</Text>
+        <View style={styles.filaTituloObjetivos}>
+          <Text variant="labelLarge" style={styles.textoSecundario}>Objetivos de presupuesto</Text>
+          <Button compact mode="text" onPress={abrirDialogoObjetivo}>Crear</Button>
+        </View>
         {avances.length === 0 ? (
           <Text variant="bodySmall" style={styles.textoSecundario}>Sin objetivos configurados para esta cuenta.</Text>
         ) : (
@@ -219,6 +261,38 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
       </View>
 
       <Portal>
+
+        <Dialog visible={mostrarDialogoObjetivo} onDismiss={() => setMostrarDialogoObjetivo(false)}>
+          <Dialog.Title>Nuevo objetivo</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodySmall" style={styles.ayudaObjetivo}>Selecciona una categoría y define un monto mensual.</Text>
+            <View style={styles.categoriasObjetivo}>
+              {categorias.map((categoria) => (
+                <Chip
+                  key={categoria.id}
+                  selected={categoriaObjetivoSeleccionada === categoria.id}
+                  onPress={() => setCategoriaObjetivoSeleccionada(categoria.id)}
+                  style={styles.chipCategoria}
+                >
+                  {categoria.nombre}
+                </Chip>
+              ))}
+            </View>
+            <TextInput
+              label="Monto mensual"
+              value={montoObjetivo}
+              keyboardType="decimal-pad"
+              onChangeText={setMontoObjetivo}
+              mode="outlined"
+            />
+            {errorObjetivo && <Text style={styles.errorObjetivo}>{errorObjetivo}</Text>}
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setMostrarDialogoObjetivo(false)}>Cancelar</Button>
+            <Button onPress={guardarObjetivo}>Guardar</Button>
+          </Dialog.Actions>
+        </Dialog>
+
         <Dialog visible={Boolean(transaccionEliminar)} onDismiss={() => setTransaccionEliminar(null)}>
           <Dialog.Title>Eliminar movimiento</Dialog.Title>
           <Dialog.Content>
@@ -277,6 +351,28 @@ const styles = StyleSheet.create({
   },
   montoNegativo: {
     color: '#C4362D'
+  },
+  filaTituloObjetivos: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  ayudaObjetivo: {
+    marginBottom: 8,
+    opacity: 0.75
+  },
+  categoriasObjetivo: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12
+  },
+  chipCategoria: {
+    marginRight: 4
+  },
+  errorObjetivo: {
+    color: '#C4362D',
+    marginTop: 8
   },
   bloqueObjetivo: {
     marginTop: 8,
