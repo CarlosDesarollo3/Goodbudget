@@ -1,5 +1,6 @@
 import { Categoria, Cuenta, Grupo, ReglaRecurrente, Transaccion } from '@/Dominio/Modelos';
 import { ErrorDatos, RegistrarLogDesarrollo } from '@/Utilidades/Errores';
+import { ModoTema } from '@/Interfaz/Tema/temaAplicacion';
 import { ObtenerBd } from '../Bd/ConexionBd';
 import {
   RepositorioCategorias,
@@ -11,10 +12,29 @@ import {
 
 const MapearBooleano = (valor: number): boolean => valor === 1;
 
+export interface RespaldoDatos {
+  grupos: Grupo[];
+  cuentas: Cuenta[];
+  categorias: Categoria[];
+  transacciones: Transaccion[];
+  reglasRecurrentes: Array<Omit<ReglaRecurrente, 'habilitada'> & { habilitada: number }>;
+  configuracion: Array<{ clave: string; valor: string }>;
+}
+
 export class RepositorioSqlite
   implements RepositorioSobres, RepositorioTransacciones, RepositorioCategorias, RepositorioReglas, RepositorioConfiguracion
 {
   private bd = ObtenerBd();
+
+  private ExisteCategoriaConNombre(nombre: string, idExcluir?: string): boolean {
+    const nombreNormalizado = nombre.trim().toLowerCase();
+    const resultado = this.bd.getFirstSync<{ total: number }>(
+      'SELECT COUNT(*) AS total FROM categorias WHERE LOWER(TRIM(nombre)) = ? AND (? IS NULL OR id != ?)',
+      [nombreNormalizado, idExcluir ?? null, idExcluir ?? null]
+    );
+
+    return (resultado?.total ?? 0) > 0;
+  }
 
   ListarGrupos(): Grupo[] {
     try {
@@ -125,12 +145,29 @@ export class RepositorioSqlite
   }
 
   CrearCategoria(categoria: Categoria): void {
+    if (this.ExisteCategoriaConNombre(categoria.nombre)) {
+      throw new ErrorDatos('Ya existe una categoría con ese nombre');
+    }
+
     this.bd.runSync('INSERT INTO categorias (id,nombre,color,icono,creadoEn) VALUES (?,?,?,?,?)', [
       categoria.id,
       categoria.nombre,
       categoria.color,
       categoria.icono,
       categoria.creadoEn
+    ]);
+  }
+
+  ActualizarCategoria(categoria: Pick<Categoria, 'id' | 'nombre' | 'color' | 'icono'>): void {
+    if (this.ExisteCategoriaConNombre(categoria.nombre, categoria.id)) {
+      throw new ErrorDatos('Ya existe una categoría con ese nombre');
+    }
+
+    this.bd.runSync('UPDATE categorias SET nombre = ?, color = ?, icono = ? WHERE id = ?', [
+      categoria.nombre,
+      categoria.color,
+      categoria.icono,
+      categoria.id
     ]);
   }
 
@@ -246,6 +283,10 @@ export class RepositorioSqlite
         regla.id
       ]
     );
+  }
+
+  EliminarRegla(idRegla: string): void {
+    this.bd.runSync('DELETE FROM reglasRecurrentes WHERE id = ?', [idRegla]);
   }
 
   ObtenerMoneda(): string {

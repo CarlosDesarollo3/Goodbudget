@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Dialog, Portal, Snackbar, Text, TextInput } from 'react-native-paper';
+import { Button, Dialog, Portal, Snackbar, Text } from 'react-native-paper';
+import { InputConCerrarTeclado } from '@/Interfaz/Componentes/InputConCerrarTeclado';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { TarjetaCuenta } from '@/Interfaz/Componentes/TarjetaCuenta';
@@ -8,6 +9,7 @@ import { TarjetaGrupo } from '@/Interfaz/Componentes/TarjetaGrupo';
 import { FilaDeslizableAcciones, CerrarFilaAbierta } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { EstadoVacioLista } from '@/Interfaz/Componentes/EstadoVacioLista';
 
 type TipoNodo = 'grupo' | 'cuenta';
 
@@ -43,6 +45,7 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
   } = UsarAlmacenAplicacion();
   const cuentas = cuentasPorGrupo[idGrupo] ?? [];
   const subgrupos = grupos.filter((grupo) => grupo.idGrupoPadre === idGrupo);
+  const estaVacio = cuentas.length === 0 && subgrupos.length === 0;
 
   const [nodoRenombrar, setNodoRenombrar] = useState<NodoSeleccionado | null>(null);
   const [nodoEliminar, setNodoEliminar] = useState<NodoSeleccionado | null>(null);
@@ -136,39 +139,51 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
   return (
     <View style={styles.contenedor}>
       <ScrollView contentContainerStyle={[styles.contenido, { paddingBottom: 100 + insets.bottom }]} onStartShouldSetResponder={() => { CerrarFilaAbierta(); return false; }}>
-        {subgrupos.map((grupo) => (
-          <FilaDeslizableAcciones
-            key={grupo.id}
-            id={grupo.id}
-            onEditar={() => abrirDialogoRenombrar({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
-            onEliminar={() => setNodoEliminar({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
-            onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
-          >
-            <TarjetaGrupo
-              nombre={grupo.nombre}
-              total={0}
-              moneda={moneda}
-              AlPresionar={() => navigation.push('PantallaDetalleGrupo', { idGrupo: grupo.id, nombreGrupo: grupo.nombre })}
-            />
-          </FilaDeslizableAcciones>
-        ))}
+        {estaVacio ? (
+          <EstadoVacioLista
+            icono="folder-plus-outline"
+            titulo="Este grupo está vacío"
+            descripcion="Crea una cuenta para empezar a mover dinero dentro del grupo y organizar mejor tus sobres."
+            etiquetaCta="Crear primera cuenta"
+            onPressCta={() => abrirDialogoCreacion('cuenta')}
+          />
+        ) : (
+          <>
+            {subgrupos.map((grupo) => (
+              <FilaDeslizableAcciones
+                key={grupo.id}
+                id={grupo.id}
+                onEditar={() => abrirDialogoRenombrar({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
+                onEliminar={() => setNodoEliminar({ id: grupo.id, nombre: grupo.nombre, tipo: 'grupo' })}
+                onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
+              >
+                <TarjetaGrupo
+                  nombre={grupo.nombre}
+                  total={0}
+                  moneda={moneda}
+                  AlPresionar={() => navigation.push('PantallaDetalleGrupo', { idGrupo: grupo.id, nombreGrupo: grupo.nombre })}
+                />
+              </FilaDeslizableAcciones>
+            ))}
 
-        {cuentas.map((cuenta) => (
-          <FilaDeslizableAcciones
-            key={cuenta.id}
-            id={cuenta.id}
-            onEditar={() => abrirDialogoRenombrar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
-            onEliminar={() => setNodoEliminar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
-            onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
-          >
-            <TarjetaCuenta
-              nombre={cuenta.nombre}
-              balance={ObtenerBalanceCuenta(cuenta.id)}
-              moneda={moneda}
-              AlPresionar={() => navigation.navigate('PantallaDetalleCuenta', { idCuenta: cuenta.id, nombreCuenta: cuenta.nombre })}
-            />
-          </FilaDeslizableAcciones>
-        ))}
+            {cuentas.map((cuenta) => (
+              <FilaDeslizableAcciones
+                key={cuenta.id}
+                id={cuenta.id}
+                onEditar={() => abrirDialogoRenombrar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
+                onEliminar={() => setNodoEliminar({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
+                onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
+              >
+                <TarjetaCuenta
+                  nombre={cuenta.nombre}
+                  balance={ObtenerBalanceCuenta(cuenta.id)}
+                  moneda={moneda}
+                  AlPresionar={() => navigation.navigate('PantallaDetalleCuenta', { idCuenta: cuenta.id, nombreCuenta: cuenta.nombre })}
+                />
+              </FilaDeslizableAcciones>
+            ))}
+          </>
+        )}
       </ScrollView>
 
       <View style={[styles.accionesInferiores, { bottom: 12 + insets.bottom }]}>
@@ -180,9 +195,9 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
         <Dialog visible={Boolean(creacionPendiente)} onDismiss={() => setCreacionPendiente(null)}>
           <Dialog.Title>{creacionPendiente?.tipo === 'cuenta' ? 'Nueva cuenta' : 'Nuevo subgrupo'}</Dialog.Title>
           <Dialog.Content>
-            <TextInput value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre (opcional)" autoFocus />
+            <InputConCerrarTeclado value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre (opcional)" autoFocus />
             {creacionPendiente?.tipo === 'cuenta' ? (
-              <TextInput
+              <InputConCerrarTeclado
                 value={montoInicialTemporal}
                 onChangeText={setMontoInicialTemporal}
                 mode="outlined"
@@ -201,7 +216,7 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
         <Dialog visible={Boolean(nodoRenombrar)} onDismiss={() => setNodoRenombrar(null)}>
           <Dialog.Title>Renombrar {nodoRenombrar?.tipo}</Dialog.Title>
           <Dialog.Content>
-            <TextInput value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre" autoFocus />
+            <InputConCerrarTeclado value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre" autoFocus />
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={() => setNodoRenombrar(null)}>Cancelar</Button>
