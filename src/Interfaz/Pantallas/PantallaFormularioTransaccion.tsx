@@ -139,8 +139,20 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
       ? '#1F8F4C'
       : '#7A7A7A';
   const simboloMoneda = React.useMemo(() => {
-    const partes = new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda }).formatToParts(0);
-    return partes.find((parte) => parte.type === 'currency')?.value ?? moneda;
+    try {
+      if (typeof Intl === 'object' && typeof Intl.NumberFormat === 'function') {
+        const nf = new Intl.NumberFormat('es', { style: 'currency', currency: moneda });
+        if (typeof (nf as any).formatToParts === 'function') {
+          const partes = (nf as any).formatToParts(0);
+          return partes.find((parte: any) => parte.type === 'currency')?.value ?? moneda;
+        }
+      }
+    } catch (e) {
+      // fall through to fallback
+    }
+
+    const symbols: Record<string, string> = { MXN: '$', USD: '$', EUR: '€' };
+    return symbols[moneda] ?? moneda;
   }, [moneda]);
 
   const abrirSelectorCuentas = (campo: 'idCuentaOrigen' | 'idCuentaDestino'): void => {

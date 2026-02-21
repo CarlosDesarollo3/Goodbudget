@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Surface, Text } from 'react-native-paper';
+import { FormatearMoneda } from '@/Utilidades/Formatos';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
@@ -30,7 +31,7 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
       <Surface style={styles.tarjetaTotal} elevation={1}>
         <Text variant="labelLarge" style={styles.textoSecundario}>Balance</Text>
         <Text variant="headlineSmall" style={balanceCuenta >= 0 ? styles.montoPositivo : styles.montoNegativo}>
-          {new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda }).format(balanceCuenta)}
+          {FormatearMoneda(balanceCuenta, moneda)}
         </Text>
       </Surface>
 
