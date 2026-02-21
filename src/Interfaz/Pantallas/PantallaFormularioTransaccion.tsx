@@ -283,7 +283,11 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
             onChangeText={setBusquedaCuenta}
             style={styles.inputMejorado}
           />
-          <ScrollView style={styles.listaCuentasModal}>
+          <ScrollView
+            style={styles.listaCuentasModal}
+            contentContainerStyle={styles.contenidoListaCuentasModal}
+            keyboardShouldPersistTaps="handled"
+          >
             {cuentasDisponiblesSelector.map((cuenta) => (
               <Pressable
                 key={`modal-${cuenta.id}`}
@@ -383,10 +387,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: '#FFFFFF',
     gap: 10,
-    maxHeight: '75%'
+    maxHeight: '88%'
   },
   listaCuentasModal: {
-    maxHeight: 260
+    flexGrow: 1
+  },
+  contenidoListaCuentasModal: {
+    paddingBottom: 8
   },
   itemCuentaModal: {
     paddingVertical: 10,
