@@ -246,6 +246,6 @@ const styles = StyleSheet.create({
   },
   fabGlobal: {
     position: 'absolute',
-    right: 16
+    right: 0
   }
 });
