@@ -28,10 +28,16 @@ interface EstadoAplicacion {
   RegistrarTransaccion(datos: Omit<Transaccion, 'id' | 'creadoEn'>): void;
   ActualizarTransaccion(transaccion: Transaccion): void;
   EliminarTransaccion(idTransaccion: string): void;
-  CrearCategoria(nombre: string, color?: string): void;
+  CrearCategoria(nombre: string, color?: string, icono?: string): void;
+  ActualizarCategoria(idCategoria: string, nombre: string, color?: string, icono?: string): void;
+  EliminarCategoria(idCategoria: string): void;
   CrearReglaRecurrente(regla: Omit<ReglaRecurrente, 'id' | 'frecuencia' | 'creadoEn'>): void;
+  ActualizarReglaRecurrente(regla: ReglaRecurrente): void;
+  EliminarReglaRecurrente(idRegla: string): void;
   EjecutarReglasPendientes(): number;
   GuardarMoneda(moneda: string): void;
+  ExportarDatos(): string;
+  ImportarDatos(contenidoRespaldo: string): void;
   ObtenerBalanceCuenta(idCuenta: string): number;
 }
 
@@ -177,8 +183,18 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     get().InicializarDatos();
   },
 
-  CrearCategoria: (nombre, color) => {
-    repositorio.CrearCategoria({ id: GenerarUuid(), nombre, color, creadoEn: formatISO(new Date()) });
+  CrearCategoria: (nombre, color, icono) => {
+    repositorio.CrearCategoria({ id: GenerarUuid(), nombre, color, icono, creadoEn: formatISO(new Date()) });
+    get().InicializarDatos();
+  },
+
+  ActualizarCategoria: (idCategoria, nombre, color, icono) => {
+    repositorio.ActualizarCategoria({ id: idCategoria, nombre, color, icono });
+    get().InicializarDatos();
+  },
+
+  EliminarCategoria: (idCategoria) => {
+    repositorio.EliminarCategoria(idCategoria);
     get().InicializarDatos();
   },
 
@@ -193,6 +209,16 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     get().InicializarDatos();
   },
 
+  ActualizarReglaRecurrente: (regla) => {
+    repositorio.ActualizarRegla(regla);
+    get().InicializarDatos();
+  },
+
+  EliminarReglaRecurrente: (idRegla) => {
+    repositorio.EliminarRegla(idRegla);
+    get().InicializarDatos();
+  },
+
   EjecutarReglasPendientes: () => {
     const total = motorRecurrencias.EjecutarReglasPendientes(new Date());
     get().InicializarDatos();
@@ -202,6 +228,26 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
   GuardarMoneda: (moneda) => {
     repositorio.GuardarMoneda(moneda);
     set({ moneda });
+  },
+
+  ExportarDatos: () => {
+    InicializarBd();
+    const datos = repositorio.ExportarDatos();
+    return JSON.stringify({ version: 1, exportadoEn: formatISO(new Date()), datos }, null, 2);
+  },
+
+  ImportarDatos: (contenidoRespaldo) => {
+    InicializarBd();
+    const respaldo = JSON.parse(contenidoRespaldo) as {
+      datos?: ReturnType<RepositorioSqlite['ExportarDatos']>;
+    };
+
+    if (!respaldo?.datos) {
+      throw new Error('El archivo no contiene un respaldo válido.');
+    }
+
+    repositorio.ImportarDatos(respaldo.datos);
+    get().InicializarDatos();
   },
 
   ObtenerBalanceCuenta: (idCuenta) => {
