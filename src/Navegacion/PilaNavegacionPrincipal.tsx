@@ -11,6 +11,7 @@ import { PantallaFormularioTransaccion } from '@/Interfaz/Pantallas/PantallaForm
 import { PantallaCategorias } from '@/Interfaz/Pantallas/PantallaCategorias';
 import { PantallaReglasRecurrentes } from '@/Interfaz/Pantallas/PantallaReglasRecurrentes';
 import { PantallaConfiguracion } from '@/Interfaz/Pantallas/PantallaConfiguracion';
+import { PantallaAnalitica } from '@/Interfaz/Pantallas/PantallaAnalitica';
 import { MenuCabecera } from '@/Interfaz/Componentes/MenuCabecera';
 import { TemaAplicacion } from '@/Interfaz/Tema/temaAplicacion';
 
@@ -102,6 +103,10 @@ export const PilaNavegacionPrincipal = ({ tema }: PropsPilaNavegacionPrincipal):
             };
           }}
         />
+        <Pila.Screen name="PantallaCategorias" component={PantallaCategorias} options={{ title: 'Categorías' }} />
+        <Pila.Screen name="PantallaReglasRecurrentes" component={PantallaReglasRecurrentes} options={{ title: 'Reglas Recurrentes' }} />
+        <Pila.Screen name="PantallaAnalitica" component={PantallaAnalitica} options={{ title: 'Analítica' }} />
+        <Pila.Screen name="PantallaConfiguracion" component={PantallaConfiguracion} options={{ title: 'Configuración' }} />
       </Pila.Navigator>
     </NavigationContainer>
   );

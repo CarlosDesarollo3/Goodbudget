@@ -19,5 +19,6 @@ export type ParametrosNavegacion = {
     | undefined;
   PantallaCategorias: undefined;
   PantallaReglasRecurrentes: undefined;
+  PantallaAnalitica: undefined;
   PantallaConfiguracion: undefined;
 };

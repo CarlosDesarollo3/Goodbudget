@@ -55,6 +55,14 @@ export class RepositorioSqlite
     }
   }
 
+  ListarCuentas(): Cuenta[] {
+    try {
+      return this.bd.getAllSync<Cuenta>('SELECT * FROM cuentas ORDER BY nombre');
+    } catch (error) {
+      throw new ErrorDatos('No se pudieron listar las cuentas', error);
+    }
+  }
+
   ListarCuentasPorGrupo(idGrupoPadre: string | null): Cuenta[] {
     try {
       if (idGrupoPadre === null) {
@@ -138,6 +146,14 @@ export class RepositorioSqlite
          ORDER BY fecha DESC, creadoEn DESC`,
         [idCuenta, idCuenta]
       );
+    } catch (error) {
+      throw new ErrorDatos('No se pudieron listar las transacciones', error);
+    }
+  }
+
+  ListarTransacciones(): Transaccion[] {
+    try {
+      return this.bd.getAllSync<Transaccion>('SELECT * FROM transacciones ORDER BY fecha DESC, creadoEn DESC');
     } catch (error) {
       throw new ErrorDatos('No se pudieron listar las transacciones', error);
     }
