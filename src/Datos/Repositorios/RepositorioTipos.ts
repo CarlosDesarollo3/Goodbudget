@@ -1,5 +1,15 @@
 import { AvanceObjetivoPresupuesto, Categoria, Cuenta, Grupo, ObjetivoPresupuesto, ReglaRecurrente, Transaccion } from '@/Dominio/Modelos';
 
+export interface RespaldoDatos {
+  grupos: Grupo[];
+  cuentas: Cuenta[];
+  categorias: Categoria[];
+  transacciones: Transaccion[];
+  reglasRecurrentes: (Omit<ReglaRecurrente, 'habilitada'> & { habilitada: number })[];
+  objetivosPresupuesto: ObjetivoPresupuesto[];
+  configuracion: { clave: string; valor: string }[];
+}
+
 export interface RepositorioSobres {
   ListarGrupos(): Grupo[];
   ListarCuentas(): Cuenta[];
