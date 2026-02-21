@@ -15,9 +15,7 @@ export const PantallaConfiguracion = (): React.JSX.Element => {
     setMonedaLocal(moneda);
   }, [moneda]);
 
-  const ExportarJson = (): void => {
-    Alert.alert('Exportación', 'La exportación JSON se puede conectar con FileSystem para backup local.');
-  };
+
 
   const ExportarJson = async (): Promise<void> => {
     try {
