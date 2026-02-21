@@ -1,7 +1,17 @@
 import { create } from 'zustand';
 import { formatISO } from 'date-fns';
 import { v4 as GenerarUuid } from 'uuid';
-import { Categoria, Cuenta, FrecuenciaRegla, Grupo, ReglaRecurrente, TipoTransaccion, Transaccion } from '@/Dominio/Modelos';
+import {
+  AvanceObjetivoPresupuesto,
+  Categoria,
+  Cuenta,
+  FrecuenciaRegla,
+  Grupo,
+  ObjetivoPresupuesto,
+  ReglaRecurrente,
+  TipoTransaccion,
+  Transaccion
+} from '@/Dominio/Modelos';
 import { RepositorioSqlite } from '@/Datos/Repositorios/RepositorioSqlite';
 import { InicializarBd } from '@/Datos/Bd/ConexionBd';
 import { CalcularBalanceCuenta } from '@/Servicios/MotorBalances';
@@ -13,6 +23,7 @@ interface EstadoAplicacion {
   cuentasPorGrupo: Record<string, Cuenta[]>;
   categorias: Categoria[];
   reglas: ReglaRecurrente[];
+  objetivosPresupuesto: ObjetivoPresupuesto[];
   transaccionesPorCuenta: Record<string, Transaccion[]>;
   moneda: string;
   errorUi?: string;
@@ -38,7 +49,10 @@ interface EstadoAplicacion {
   EliminarReglaRecurrente(idRegla: string): void;
   EjecutarReglasPendientes(): number;
   GuardarMoneda(moneda: string): void;
-  GuardarModoTema(modoTema: ModoTema): void;
+  CrearObjetivoPresupuesto(datos: Omit<ObjetivoPresupuesto, 'id' | 'creadoEn' | 'actualizadoEn'>): void;
+  ActualizarObjetivoPresupuesto(objetivo: ObjetivoPresupuesto): void;
+  EliminarObjetivoPresupuesto(idObjetivo: string): void;
+  ListarAvancesObjetivos(idCuenta?: string): AvanceObjetivoPresupuesto[];
   ObtenerBalanceCuenta(idCuenta: string): number;
 }
 
@@ -52,6 +66,7 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
   cuentasPorGrupo: {},
   categorias: [],
   reglas: [],
+  objetivosPresupuesto: [],
   transaccionesPorCuenta: {},
   moneda: 'MXN',
   modoTema: 'sistema',
@@ -68,9 +83,9 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     const categorias = repositorio.ListarCategorias();
     const reglas = repositorio.ListarReglas();
     const moneda = repositorio.ObtenerMoneda();
-    const modoTema = repositorio.ObtenerModoTema();
+    const objetivosPresupuesto = repositorio.ListarObjetivosPresupuesto();
 
-    set({ grupos, cuentasPorGrupo, categorias, reglas, moneda, modoTema });
+    set({ grupos, cuentasPorGrupo, categorias, reglas, moneda, objetivosPresupuesto });
   },
 
   CrearGrupo: (nombre, idGrupoPadre) => {
@@ -233,10 +248,23 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     set({ moneda });
   },
 
-  GuardarModoTema: (modoTema) => {
-    repositorio.GuardarModoTema(modoTema);
-    set({ modoTema });
+  CrearObjetivoPresupuesto: (datos) => {
+    const ahora = formatISO(new Date());
+    repositorio.GuardarObjetivoPresupuesto({ ...datos, id: GenerarUuid(), creadoEn: ahora, actualizadoEn: ahora });
+    get().InicializarDatos();
   },
+
+  ActualizarObjetivoPresupuesto: (objetivo) => {
+    repositorio.ActualizarObjetivoPresupuesto({ ...objetivo, actualizadoEn: formatISO(new Date()) });
+    get().InicializarDatos();
+  },
+
+  EliminarObjetivoPresupuesto: (idObjetivo) => {
+    repositorio.EliminarObjetivoPresupuesto(idObjetivo);
+    get().InicializarDatos();
+  },
+
+  ListarAvancesObjetivos: (idCuenta) => repositorio.ListarAvancesObjetivos(undefined, idCuenta),
 
   ObtenerBalanceCuenta: (idCuenta) => {
     const transacciones = repositorio.ListarTransaccionesPorCuenta(idCuenta);

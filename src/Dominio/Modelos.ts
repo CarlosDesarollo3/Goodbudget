@@ -70,3 +70,25 @@ export interface NodoResumen {
   idGrupoPadre: string | null;
   total: number;
 }
+
+export interface ObjetivoPresupuesto {
+  id: string;
+  idCuenta: string;
+  idCategoria: string;
+  montoMensual: number;
+  umbralAlerta: number;
+  rolloverHabilitado: boolean;
+  activo: boolean;
+  creadoEn: string;
+  actualizadoEn: string;
+}
+
+export interface AvanceObjetivoPresupuesto {
+  objetivo: ObjetivoPresupuesto;
+  mesReferencia: string;
+  presupuestoDisponible: number;
+  gastoActual: number;
+  progreso: number;
+  excedido: boolean;
+  alertaUmbral: boolean;
+}

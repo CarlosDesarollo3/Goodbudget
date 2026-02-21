@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Dialog, Portal, SegmentedButtons, Snackbar, Surface, Text, TextInput } from 'react-native-paper';
+import { Button, Dialog, Portal, ProgressBar, Surface, Text } from 'react-native-paper';
 import { FormatearMoneda } from '@/Utilidades/Formatos';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -37,7 +37,7 @@ const ParsearFechaFiltro = (valor: string, finDeDia = false): number | null => {
 
 export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaDetalleCuenta'>): React.JSX.Element => {
   const { idCuenta } = route.params;
-  const { ObtenerBalanceCuenta, moneda, categorias, ConvertirCuentaEnGrupo, EliminarTransaccion } = UsarAlmacenAplicacion();
+  const { ObtenerBalanceCuenta, moneda, ConvertirCuentaEnGrupo, EliminarTransaccion, ListarAvancesObjetivos, categorias } = UsarAlmacenAplicacion();
   const insets = useSafeAreaInsets();
   const [transacciones, setTransacciones] = React.useState<Transaccion[]>([]);
   const [busqueda, setBusqueda] = React.useState('');
@@ -46,6 +46,7 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
   const [fechaHasta, setFechaHasta] = React.useState('');
   const [transaccionEliminar, setTransaccionEliminar] = React.useState<Transaccion | null>(null);
   const [mostrarAvisoGesto, setMostrarAvisoGesto] = React.useState(false);
+  const [avisoObjetivo, setAvisoObjetivo] = React.useState<string | null>(null);
 
   const recargarTransacciones = React.useCallback((): void => {
     setTransacciones(repositorio.ListarTransaccionesPorCuenta(idCuenta));
@@ -106,6 +107,25 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
   }, [transaccionesFiltradas]);
 
   const balanceCuenta = ObtenerBalanceCuenta(idCuenta);
+  const avances = React.useMemo(() => ListarAvancesObjetivos(idCuenta), [ListarAvancesObjetivos, idCuenta]);
+
+  React.useEffect(() => {
+    const hoy = new Date();
+    const alerta = avances.find((avance) => avance.excedido || avance.alertaUmbral);
+
+    if (!alerta) {
+      return;
+    }
+
+    if (alerta.excedido) {
+      setAvisoObjetivo('Sobregasto en una categoría con objetivo activo.');
+      return;
+    }
+
+    if (hoy.getDate() >= 26) {
+      setAvisoObjetivo('Vencimiento cercano: revisa tus objetivos mensuales.');
+    }
+  }, [avances]);
 
   const confirmarEliminacion = (): void => {
     if (!transaccionEliminar) {
@@ -126,46 +146,25 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
         </Text>
       </Surface>
 
-      <Surface style={styles.tarjetaFiltros} elevation={1}>
-        <TextInput
-          mode="outlined"
-          label="Buscar por nota o categoría"
-          value={busqueda}
-          onChangeText={setBusqueda}
-          left={<TextInput.Icon icon="magnify" />}
-        />
-
-        <SegmentedButtons
-          value={filtroTipo}
-          onValueChange={(valor) => setFiltroTipo(valor as FiltroTipoTransaccion)}
-          density="small"
-          style={styles.segmentosTipo}
-          buttons={[
-            { value: 'TODOS', label: 'Todos' },
-            { value: TipoTransaccion.GASTO, label: 'Gasto' },
-            { value: TipoTransaccion.INGRESO, label: 'Ingreso' },
-            { value: TipoTransaccion.TRANSFERENCIA, label: 'Transferencia' }
-          ]}
-        />
-
-        <View style={styles.filaFechas}>
-          <TextInput
-            mode="outlined"
-            label="Desde"
-            placeholder="AAAA-MM-DD"
-            value={fechaDesde}
-            onChangeText={setFechaDesde}
-            style={styles.inputFecha}
-          />
-          <TextInput
-            mode="outlined"
-            label="Hasta"
-            placeholder="AAAA-MM-DD"
-            value={fechaHasta}
-            onChangeText={setFechaHasta}
-            style={styles.inputFecha}
-          />
-        </View>
+      <Surface style={styles.tarjetaTotal} elevation={1}>
+        <Text variant="labelLarge" style={styles.textoSecundario}>Objetivos de presupuesto</Text>
+        {avances.length === 0 ? (
+          <Text variant="bodySmall" style={styles.textoSecundario}>Sin objetivos configurados para esta cuenta.</Text>
+        ) : (
+          avances.map((avance) => {
+            const categoria = categorias.find((item) => item.id === avance.objetivo.idCategoria)?.nombre ?? avance.objetivo.idCategoria;
+            const progreso = Math.max(0, Math.min(avance.progreso, 1));
+            return (
+              <View key={avance.objetivo.id} style={styles.bloqueObjetivo}>
+                <Text variant="bodySmall">{categoria}</Text>
+                <ProgressBar progress={progreso} color={avance.excedido || avance.alertaUmbral ? '#C4362D' : '#1F8F4C'} style={styles.barraObjetivo} />
+                <Text variant="labelSmall" style={avance.excedido ? styles.montoNegativo : styles.textoSecundario}>
+                  {Math.round(avance.progreso * 100)}% · {FormatearMoneda(avance.gastoActual, moneda)} / {FormatearMoneda(avance.presupuestoDisponible, moneda)}
+                </Text>
+              </View>
+            );
+          })
+        )}
       </Surface>
 
       <ScrollView
@@ -232,9 +231,8 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
         </Dialog>
       </Portal>
 
-      <Snackbar visible={mostrarAvisoGesto} onDismiss={() => setMostrarAvisoGesto(false)} duration={1800}>
-        Completa el gesto para activar la acción
-      </Snackbar>
+      {mostrarAvisoGesto && <Text style={[styles.avisoTexto, { bottom: 82 + insets.bottom }]}>Completa el gesto para activar la acción</Text>}
+      {avisoObjetivo && <Text style={[styles.avisoTexto, { bottom: 126 + insets.bottom }]}>{avisoObjetivo}</Text>}
     </View>
   );
 };
@@ -280,19 +278,15 @@ const styles = StyleSheet.create({
   montoNegativo: {
     color: '#C4362D'
   },
-  listaContenedora: {
-    paddingBottom: 10
+  bloqueObjetivo: {
+    marginTop: 8,
+    gap: 4
   },
-  subtituloMes: {
-    marginTop: 10,
-    marginBottom: 6,
-    color: '#445063'
+  barraObjetivo: {
+    height: 8,
+    borderRadius: 8
   },
-  textoVacio: {
-    textAlign: 'center',
-    opacity: 0.7,
-    marginTop: 20
-  },
+  listaContenedora: {},
   accionesInferiores: {
     position: 'absolute',
     left: 16,
@@ -304,5 +298,16 @@ const styles = StyleSheet.create({
   botonAccion: {
     flex: 1,
     maxWidth: 220
+  },
+  avisoTexto: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 80,
+    backgroundColor: '#2F3B4A',
+    color: '#FFF',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8
   }
 });

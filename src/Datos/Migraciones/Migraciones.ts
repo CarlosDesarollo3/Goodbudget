@@ -54,6 +54,18 @@ export const EjecutarMigraciones = (bd: SQLiteDatabase): void => {
       clave TEXT PRIMARY KEY NOT NULL,
       valor TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS objetivosPresupuesto (
+      id TEXT PRIMARY KEY NOT NULL,
+      idCuenta TEXT NOT NULL,
+      idCategoria TEXT NOT NULL,
+      montoMensual REAL NOT NULL,
+      umbralAlerta REAL NOT NULL DEFAULT 0.85,
+      rolloverHabilitado INTEGER NOT NULL DEFAULT 0,
+      activo INTEGER NOT NULL DEFAULT 1,
+      creadoEn TEXT NOT NULL,
+      actualizadoEn TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_objetivos_cuenta_categoria ON objetivosPresupuesto(idCuenta,idCategoria);
   `);
 
   // Reparación: si la columna idGrupoPadre existiera con NOT NULL en una versión previa,
