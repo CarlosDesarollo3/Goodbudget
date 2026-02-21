@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { Button, TextInput } from 'react-native-paper';
 import { ChipCategoria } from '@/Interfaz/Componentes/ChipCategoria';
