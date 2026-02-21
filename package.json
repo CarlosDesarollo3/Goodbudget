@@ -27,8 +27,7 @@
     "uuid": "^10.0.0",
     "zod": "^3.23.8",
     "zustand": "^4.5.5",
-    "expo-file-system": "~19.0.17",
-    "expo-sharing": "~14.0.7"
+    "@react-navigation/bottom-tabs": "^6.6.1"
   },
   "devDependencies": {
     "@testing-library/jest-native": "^5.4.3",
