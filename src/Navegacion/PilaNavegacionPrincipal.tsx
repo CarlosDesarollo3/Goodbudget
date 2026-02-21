@@ -21,8 +21,7 @@ const Pestanas = createBottomTabNavigator<ParametrosPestanasPrincipal>();
 const iconosPestanas: Record<keyof ParametrosPestanasPrincipal, { activo: React.ComponentProps<typeof MaterialCommunityIcons>['name']; inactivo: React.ComponentProps<typeof MaterialCommunityIcons>['name'] }> = {
   PantallaInicio: { activo: 'home', inactivo: 'home-outline' },
   PantallaCategorias: { activo: 'shape', inactivo: 'shape-outline' },
-  PantallaReglasRecurrentes: { activo: 'calendar-sync', inactivo: 'calendar-sync-outline' },
-  PantallaConfiguracion: { activo: 'cog', inactivo: 'cog-outline' }
+  PantallaAnalitica: { activo: 'chart-box', inactivo: 'chart-box-outline' }
 };
 
 const NavegacionPestanasPrincipal = (): React.JSX.Element => (
@@ -41,8 +40,7 @@ const NavegacionPestanasPrincipal = (): React.JSX.Element => (
   >
     <Pestanas.Screen name="PantallaInicio" component={PantallaInicio} options={{ title: 'Manejo de Sobres' }} />
     <Pestanas.Screen name="PantallaCategorias" component={PantallaCategorias} options={{ title: 'Categorías' }} />
-    <Pestanas.Screen name="PantallaReglasRecurrentes" component={PantallaReglasRecurrentes} options={{ title: 'Reglas Recurrentes' }} />
-    <Pestanas.Screen name="PantallaConfiguracion" component={PantallaConfiguracion} options={{ title: 'Configuración' }} />
+    <Pestanas.Screen name="PantallaAnalitica" component={PantallaAnalitica} options={{ title: 'Analítica' }} />
   </Pestanas.Navigator>
 );
 

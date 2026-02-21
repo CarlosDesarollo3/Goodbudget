@@ -32,26 +32,10 @@ export const MenuCabecera = ({ navigation }: PropiedadesMenuCabecera): React.JSX
       <Menu.Item
         onPress={() => {
           setMenuVisible(false);
-          navigation.navigate('PantallaPestanasPrincipal', { screen: 'PantallaCategorias' });
-        }}
-        title="Categorías"
-        leadingIcon="shape-outline"
-      />
-      <Menu.Item
-        onPress={() => {
-          setMenuVisible(false);
-          navigation.navigate('PantallaPestanasPrincipal', { screen: 'PantallaReglasRecurrentes' });
+          navigation.navigate('PantallaReglasRecurrentes');
         }}
         title="Reglas recurrentes"
         leadingIcon="calendar-sync"
-      />
-      <Menu.Item
-        onPress={() => {
-          setMenuVisible(false);
-          navigation.navigate('PantallaAnalitica');
-        }}
-        title="Analítica"
-        leadingIcon="chart-box-outline"
       />
       <Menu.Item
         onPress={() => {
