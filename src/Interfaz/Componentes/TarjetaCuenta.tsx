@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
 import { Avatar, Card, ProgressBar, Text, useTheme } from 'react-native-paper';
 import { FormatearMoneda } from '@/Utilidades/Formatos';
+import { TemaAplicacion } from '@/Interfaz/Tema/temaAplicacion';
 
 interface PropsTarjetaCuenta {
   nombre: string;
@@ -33,12 +34,12 @@ export const TarjetaCuenta = ({
       onPress={AlPresionar}
       onLongPress={AlSostener}
       delayLongPress={220}
-      style={[{ borderRadius: 14, borderColor: '#C4D0DD', backgroundColor: '#F8FAFC' }, estilo]}
+      style={[{ borderRadius: 14, borderColor: tema.colors.outline, backgroundColor: tema.colors.surface }, estilo]}
     >
       <Card.Title
         title={nombre}
         titleVariant="titleSmall"
-        left={(props) => <Avatar.Icon {...props} icon="wallet-outline" size={32} style={{ backgroundColor: '#DEE7F0' }} color={tema.colors.primary} />}
+        left={(props) => <Avatar.Icon {...props} icon="wallet-outline" size={32} style={{ backgroundColor: tema.colors.surfaceVariant }} color={tema.colors.primary} />}
         right={() => <Text variant="titleSmall" style={{ color: colorBalance, marginRight: 12 }}>{FormatearMoneda(balance, moneda)}</Text>}
       />
       {typeof progresoObjetivo === 'number' && (

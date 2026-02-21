@@ -24,6 +24,7 @@ export interface RepositorioTransacciones {
 export interface RepositorioCategorias {
   ListarCategorias(): Categoria[];
   CrearCategoria(categoria: Categoria): void;
+  ActualizarCategoria(categoria: Pick<Categoria, 'id' | 'nombre' | 'color' | 'icono'>): void;
   EliminarCategoria(idCategoria: string): void;
 }
 
@@ -31,11 +32,14 @@ export interface RepositorioReglas {
   ListarReglas(): ReglaRecurrente[];
   GuardarRegla(regla: ReglaRecurrente): void;
   ActualizarRegla(regla: ReglaRecurrente): void;
+  EliminarRegla(idRegla: string): void;
 }
 
 export interface RepositorioConfiguracion {
   ObtenerMoneda(): string;
   GuardarMoneda(moneda: string): void;
+  ObtenerModoTema(): 'sistema' | 'claro' | 'oscuro';
+  GuardarModoTema(modoTema: 'sistema' | 'claro' | 'oscuro'): void;
 }
 
 export interface RepositorioObjetivosPresupuesto {
