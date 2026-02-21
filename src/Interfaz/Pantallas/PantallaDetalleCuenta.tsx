@@ -17,6 +17,7 @@ import { EstadoVacioLista } from '@/Interfaz/Componentes/EstadoVacioLista';
 
 const repositorio = new RepositorioSqlite();
 type FiltroTipoTransaccion = 'TODOS' | TipoTransaccion.GASTO | TipoTransaccion.INGRESO | TipoTransaccion.TRANSFERENCIA;
+type PresetRangoFecha = '7_DIAS' | '30_DIAS' | 'MES_ACTUAL' | 'PERSONALIZADO';
 
 const ParsearFechaFiltro = (valor: string, finDeDia = false): number | null => {
   const valorNormalizado = valor.trim();
@@ -45,6 +46,7 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
   const [filtroTipo, setFiltroTipo] = React.useState<FiltroTipoTransaccion>('TODOS');
   const [fechaDesde, setFechaDesde] = React.useState('');
   const [fechaHasta, setFechaHasta] = React.useState('');
+  const [presetRangoFecha, setPresetRangoFecha] = React.useState<PresetRangoFecha>('PERSONALIZADO');
   const [transaccionEliminar, setTransaccionEliminar] = React.useState<Transaccion | null>(null);
   const [mostrarAvisoGesto, setMostrarAvisoGesto] = React.useState(false);
   const [avisoObjetivo, setAvisoObjetivo] = React.useState<string | null>(null);
@@ -71,10 +73,80 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
     }, {});
   }, [categorias]);
 
-  const transaccionesFiltradas = React.useMemo(() => {
-    const terminoBusqueda = busqueda.trim().toLowerCase();
+  const aplicarPresetFecha = React.useCallback((preset: PresetRangoFecha): void => {
+    setPresetRangoFecha(preset);
+
+    if (preset === 'PERSONALIZADO') {
+      return;
+    }
+
+    const hoy = new Date();
+    let inicio = new Date();
+    const fin = new Date();
+
+    if (preset === '7_DIAS') {
+      inicio.setDate(hoy.getDate() - 6);
+    } else if (preset === '30_DIAS') {
+      inicio.setDate(hoy.getDate() - 29);
+    } else {
+      inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    }
+
+    setFechaDesde(format(inicio, 'yyyy-MM-dd'));
+    setFechaHasta(format(fin, 'yyyy-MM-dd'));
+  }, []);
+
+  const errorFechaDesde = React.useMemo(() => {
+    if (!fechaDesde.trim()) {
+      return null;
+    }
+
+    return ParsearFechaFiltro(fechaDesde) === null ? 'Fecha desde inválida. Usa formato AAAA-MM-DD.' : null;
+  }, [fechaDesde]);
+
+  const errorFechaHasta = React.useMemo(() => {
+    if (!fechaHasta.trim()) {
+      return null;
+    }
+
+    return ParsearFechaFiltro(fechaHasta, true) === null ? 'Fecha hasta inválida. Usa formato AAAA-MM-DD.' : null;
+  }, [fechaHasta]);
+
+  const hayErrorRangoFecha = Boolean(errorFechaDesde || errorFechaHasta);
+
+  const descripcionRangoActivo = React.useMemo(() => {
+    if (!fechaDesde && !fechaHasta) {
+      return 'Sin rango de fechas activo';
+    }
+
     const inicio = ParsearFechaFiltro(fechaDesde);
     const fin = ParsearFechaFiltro(fechaHasta, true);
+
+    if (hayErrorRangoFecha) {
+      return 'Corrige el formato de fecha para aplicar el rango personalizado';
+    }
+
+    const formatearNatural = (timestamp: number): string => format(new Date(timestamp), "d 'de' MMMM yyyy", { locale: es });
+
+    if (inicio && fin) {
+      return `Desde ${formatearNatural(inicio)} hasta ${formatearNatural(fin)}`;
+    }
+
+    if (inicio) {
+      return `Desde ${formatearNatural(inicio)} en adelante`;
+    }
+
+    if (fin) {
+      return `Hasta ${formatearNatural(fin)}`;
+    }
+
+    return 'Sin rango de fechas activo';
+  }, [fechaDesde, fechaHasta, hayErrorRangoFecha]);
+
+  const transaccionesFiltradas = React.useMemo(() => {
+    const terminoBusqueda = busqueda.trim().toLowerCase();
+    const inicio = hayErrorRangoFecha ? null : ParsearFechaFiltro(fechaDesde);
+    const fin = hayErrorRangoFecha ? null : ParsearFechaFiltro(fechaHasta, true);
 
     return transacciones.filter((transaccion) => {
       const nota = transaccion.nota?.toLowerCase() ?? '';
@@ -179,14 +251,21 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
 
   return (
     <View style={styles.contenedor}>
-      <Surface style={styles.tarjetaTotal} elevation={1}>
+      <ScrollView
+        contentContainerStyle={[styles.contenidoPrincipal, { paddingBottom: 120 + insets.bottom }]}
+        onStartShouldSetResponder={() => {
+          CerrarFilaAbierta();
+          return false;
+        }}
+      >
+        <Surface style={styles.tarjetaTotal} elevation={1}>
         <Text variant="labelLarge" style={styles.textoSecundario}>Balance</Text>
         <Text variant="headlineSmall" style={balanceCuenta >= 0 ? styles.montoPositivo : styles.montoNegativo}>
           {FormatearMoneda(balanceCuenta, moneda)}
         </Text>
-      </Surface>
+        </Surface>
 
-      <Surface style={styles.tarjetaFiltros} elevation={1}>
+        <Surface style={styles.tarjetaFiltros} elevation={1}>
         <Text variant="labelLarge" style={styles.textoSecundario}>Buscar y filtrar movimientos</Text>
         <Searchbar
           placeholder="Buscar por nota o categoría"
@@ -214,20 +293,52 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
             mode="outlined"
             dense
             value={fechaDesde}
-            onChangeText={setFechaDesde}
+            onChangeText={(valor) => {
+              setFechaDesde(valor);
+              setPresetRangoFecha('PERSONALIZADO');
+            }}
             label="Desde (AAAA-MM-DD)"
             placeholder="2026-01-01"
+            error={Boolean(errorFechaDesde)}
           />
           <TextInput
             style={styles.inputFecha}
             mode="outlined"
             dense
             value={fechaHasta}
-            onChangeText={setFechaHasta}
+            onChangeText={(valor) => {
+              setFechaHasta(valor);
+              setPresetRangoFecha('PERSONALIZADO');
+            }}
             label="Hasta (AAAA-MM-DD)"
             placeholder="2026-12-31"
+            error={Boolean(errorFechaHasta)}
           />
         </View>
+
+        <View style={styles.segmentosTipo}>
+          {([
+            { id: '7_DIAS', etiqueta: '7 días' },
+            { id: '30_DIAS', etiqueta: '30 días' },
+            { id: 'MES_ACTUAL', etiqueta: 'Mes actual' },
+            { id: 'PERSONALIZADO', etiqueta: 'Personalizado' }
+          ] as const).map((preset) => (
+            <Chip
+              key={preset.id}
+              selected={presetRangoFecha === preset.id}
+              onPress={() => aplicarPresetFecha(preset.id)}
+              compact
+            >
+              {preset.etiqueta}
+            </Chip>
+          ))}
+        </View>
+
+        {(errorFechaDesde || errorFechaHasta) && (
+          <Text style={styles.errorObjetivo}>{errorFechaDesde ?? errorFechaHasta}</Text>
+        )}
+
+        <Text variant="bodySmall" style={styles.textoSecundario}>{descripcionRangoActivo}</Text>
 
         <View style={styles.filaResumenFiltros}>
           <Text variant="bodySmall" style={styles.textoSecundario}>
@@ -240,14 +351,27 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
               setFiltroTipo('TODOS');
               setFechaDesde('');
               setFechaHasta('');
+              setPresetRangoFecha('PERSONALIZADO');
             }}
           >
             Limpiar
           </Button>
         </View>
-      </Surface>
+        <Button
+          mode="outlined"
+          compact
+          style={styles.botonRestablecerRango}
+          onPress={() => {
+            setFechaDesde('');
+            setFechaHasta('');
+            setPresetRangoFecha('PERSONALIZADO');
+          }}
+        >
+          Restablecer rango
+        </Button>
+        </Surface>
 
-      <Surface style={styles.tarjetaTotal} elevation={1}>
+        <Surface style={styles.tarjetaTotalCompacta} elevation={1}>
         <View style={styles.filaTituloObjetivos}>
           <Text variant="labelLarge" style={styles.textoSecundario}>Objetivos de presupuesto</Text>
           <Button compact mode="text" onPress={abrirDialogoObjetivo}>Crear</Button>
@@ -269,15 +393,8 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
             );
           })
         )}
-      </Surface>
+        </Surface>
 
-      <ScrollView
-        contentContainerStyle={[styles.listaContenedora, { paddingBottom: 100 + insets.bottom }]}
-        onStartShouldSetResponder={() => {
-          CerrarFilaAbierta();
-          return false;
-        }}
-      >
         {transaccionesFiltradas.length === 0 ? (
           <EstadoVacioLista
             icono="text-box-search-outline"
@@ -296,6 +413,7 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
               setFiltroTipo('TODOS');
               setFechaDesde('');
               setFechaHasta('');
+              setPresetRangoFecha('PERSONALIZADO');
             }}
           />
         ) : (
@@ -408,17 +526,24 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     backgroundColor: '#F2F5F9'
   },
+  contenidoPrincipal: {
+    gap: 10
+  },
   tarjetaTotal: {
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    padding: 14,
+    backgroundColor: '#FFFFFF'
+  },
+  tarjetaTotalCompacta: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     backgroundColor: '#FFFFFF'
   },
   tarjetaFiltros: {
     borderRadius: 16,
-    padding: 12,
-    marginBottom: 12,
-    gap: 10,
+    padding: 10,
+    gap: 8,
     backgroundColor: '#FFFFFF'
   },
   segmentosTipo: {
@@ -446,8 +571,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center'
   },
+  botonRestablecerRango: {
+    alignSelf: 'flex-start'
+  },
   bloqueMes: {
-    marginTop: 10
+    marginTop: 6
   },
   tituloMes: {
     marginBottom: 6,
@@ -489,7 +617,6 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 8
   },
-  listaContenedora: {},
   accionesInferiores: {
     position: 'absolute',
     left: 16,
