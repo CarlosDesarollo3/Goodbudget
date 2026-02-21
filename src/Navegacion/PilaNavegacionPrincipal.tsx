@@ -163,8 +163,8 @@ const AccionRapidaGlobal = ({
       icon={expandido ? 'close' : 'plus'}
       color={tema.colors.onPrimary}
       fabStyle={{ backgroundColor: tema.colors.primary }}
-      style={[styles.fabGlobal, { bottom:insets.bottom + 45 }]}
-      backdropColor="rgba(0, 0, 0, 0.15)"
+      style={[styles.fabGlobal, { bottom:insets.bottom  }]}
+      backdropColor="rgba(0, 0, 0, 0)"
       actions={acciones}
       onStateChange={({ open }) => setExpandido(open)}
     />
