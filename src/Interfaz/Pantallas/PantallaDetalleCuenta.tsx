@@ -124,6 +124,32 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
     const inicio = ParsearFechaFiltro(fechaDesde);
     const fin = ParsearFechaFiltro(fechaHasta, true);
 
+    if (hayErrorRangoFecha) {
+      return 'Corrige el formato de fecha para aplicar el rango personalizado';
+    }
+
+    const formatearNatural = (timestamp: number): string => format(new Date(timestamp), "d 'de' MMMM yyyy", { locale: es });
+
+    if (inicio && fin) {
+      return `Desde ${formatearNatural(inicio)} hasta ${formatearNatural(fin)}`;
+    }
+
+    if (inicio) {
+      return `Desde ${formatearNatural(inicio)} en adelante`;
+    }
+
+    if (fin) {
+      return `Hasta ${formatearNatural(fin)}`;
+    }
+
+    return 'Sin rango de fechas activo';
+  }, [fechaDesde, fechaHasta, hayErrorRangoFecha]);
+
+  const transaccionesFiltradas = React.useMemo(() => {
+    const terminoBusqueda = busqueda.trim().toLowerCase();
+    const inicio = hayErrorRangoFecha ? null : ParsearFechaFiltro(fechaDesde);
+    const fin = hayErrorRangoFecha ? null : ParsearFechaFiltro(fechaHasta, true);
+
     return transacciones.filter((transaccion) => {
       const nota = transaccion.nota?.toLowerCase() ?? '';
       const categoria = (transaccion.idCategoria ? categoriasPorId[transaccion.idCategoria] : '')?.toLowerCase() ?? '';
@@ -501,6 +527,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center'
+  },
+  botonRestablecerRango: {
+    alignSelf: 'flex-start'
   },
   bloqueMes: {
     marginTop: 6
