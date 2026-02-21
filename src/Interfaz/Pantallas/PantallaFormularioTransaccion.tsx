@@ -1,5 +1,5 @@
 import React from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Button, Chip, HelperText, Modal, Portal, SegmentedButtons, Text, TextInput } from 'react-native-paper';
@@ -97,6 +97,10 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
     }
 
     if (tipoSeleccionado === TipoTransaccion.TRANSFERENCIA) {
+      if (!transaccionEditar && montoCapturado === undefined) {
+        setValue('monto', 0, { shouldValidate: false });
+      }
+
       const origenSugerido = cuentaOrigenSeleccionada ?? idCuentaPredeterminada ?? cuentas[0]?.id;
       if (cuentaOrigenSeleccionada !== origenSugerido) {
         setValue('idCuentaOrigen', origenSugerido, { shouldValidate: true });
@@ -111,7 +115,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
 
       setValue('idCategoria', undefined, { shouldValidate: false });
     }
-  }, [tipoSeleccionado, cuentaOrigenSeleccionada, cuentaDestinoSeleccionada, setValue, cuentas, idCuentaPredeterminada]);
+  }, [tipoSeleccionado, cuentaOrigenSeleccionada, cuentaDestinoSeleccionada, montoCapturado, transaccionEditar, setValue, cuentas, idCuentaPredeterminada]);
 
   const AlEnviar = (valores: ValoresFormulario): void => {
     const carga = { ...valores, monto: Number(valores.monto) };
@@ -154,7 +158,11 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={88}
     >
-      <ScrollView contentContainerStyle={[styles.contenedor, { paddingBottom: 24 + insets.bottom }]} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.contenedor, { paddingBottom: 24 + insets.bottom }]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      >
 
       <View style={styles.resumenMonto}>
         <Text variant="labelLarge">Monto ({simboloMoneda})</Text>
@@ -167,8 +175,12 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
               dense
               underlineColor="transparent"
               activeUnderlineColor="transparent"
-              keyboardType="decimal-pad"
+              keyboardType={Platform.OS === 'ios' ? 'decimal-pad' : 'numeric'}
+              inputMode="decimal"
+              returnKeyType="done"
+              blurOnSubmit
               value={value === undefined ? '' : String(value)}
+              onSubmitEditing={Keyboard.dismiss}
               onChangeText={(texto) => onChange(texto === '' ? undefined : Number(texto.replace(',', '.')))}
               textColor={colorMontoTexto}
               style={[styles.inputMontoSuperior, colorMonto]}
@@ -193,6 +205,21 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
         )}
       />
       <HelperText type="error" visible={!!errors.monto}>{errors.monto?.message}</HelperText>
+
+      <Controller
+        control={control}
+        name="nota"
+        render={({ field: { value, onChange } }) => (
+          <TextInput
+            label="Nota (opcional)"
+            mode="outlined"
+            placeholder="Descripción breve"
+            value={value}
+            style={styles.inputMejorado}
+            onChangeText={onChange}
+          />
+        )}
+      />
 
       {requiereCuentaOrigen && tipoSeleccionado !== TipoTransaccion.TRANSFERENCIA ? (
         <View style={styles.bloqueCampo}>
@@ -237,21 +264,6 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
           </View>
         ) : <HelperText type="info">No hay categorías. Crea una en Configuración.</HelperText>
       ) : null}
-
-      <Controller
-        control={control}
-        name="nota"
-        render={({ field: { value, onChange } }) => (
-          <TextInput
-            label="Nota (opcional)"
-            mode="outlined"
-            placeholder="Descripción breve"
-            value={value}
-            style={styles.inputMejorado}
-            onChangeText={onChange}
-          />
-        )}
-      />
 
       {tipoSeleccionado === TipoTransaccion.TRANSFERENCIA ? (
         <HelperText type="info" visible={transferenciaSinCuentasSuficientes}>
@@ -314,13 +326,13 @@ const styles = StyleSheet.create({
   },
   contenedor: {
     padding: 16,
-    gap: 10
+    gap: 6
   },
   resumenMonto: {
     borderRadius: 12,
-    padding: 14,
+    padding: 10,
     backgroundColor: '#F4F5F7',
-    gap: 4,
+    gap: 2,
     alignItems: 'center'
   },
   inputMontoSuperior: {
@@ -331,7 +343,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4F5F7'
   },
   bloqueCampo: {
-    gap: 4
+    gap: 2
   },
   montoPositivo: {
     color: '#1F8F4C'
@@ -380,7 +392,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 14,
     backgroundColor: '#FFFFFF',
-    gap: 10,
+    gap: 6,
     minHeight: '65%',
     maxHeight: '94%'
   },
