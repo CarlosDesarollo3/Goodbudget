@@ -128,22 +128,21 @@ const AccionRapidaGlobal = ({
   };
 
   return (
-    <View pointerEvents="box-none" style={[styles.accionesRapidasContenedor, { bottom: 16 + insets.bottom + 56 }]}>
-      <FAB.Group
-        open={expandido}
-        visible
-        icon={expandido ? 'close' : 'plus'}
-        color={tema.colors.onPrimary}
-        fabStyle={{ backgroundColor: tema.colors.primary }}
-        backdropColor="transparent"
-        actions={[
-          { icon: 'arrow-up-bold-circle-outline', label: 'Ingreso', onPress: () => navegarFormulario(TipoTransaccion.INGRESO) },
-          { icon: 'swap-horizontal', label: 'Transferencia', onPress: () => navegarFormulario(TipoTransaccion.TRANSFERENCIA) },
-          { icon: 'arrow-down-bold-circle-outline', label: 'Gasto', onPress: () => navegarFormulario(TipoTransaccion.GASTO) }
-        ]}
-        onStateChange={({ open }) => setExpandido(open)}
-      />
-    </View>
+    <FAB.Group
+      open={expandido}
+      visible
+      icon={expandido ? 'close' : 'plus'}
+      color={tema.colors.onPrimary}
+      fabStyle={{ backgroundColor: tema.colors.primary }}
+      style={[styles.fabGlobal, { bottom: 80 + insets.bottom }]}
+      backdropColor="rgba(0, 0, 0, 0.08)"
+      actions={[
+        { icon: 'arrow-up-bold-circle-outline', label: 'Ingreso', onPress: () => navegarFormulario(TipoTransaccion.INGRESO) },
+        { icon: 'swap-horizontal', label: 'Transferencia', onPress: () => navegarFormulario(TipoTransaccion.TRANSFERENCIA) },
+        { icon: 'arrow-down-bold-circle-outline', label: 'Gasto', onPress: () => navegarFormulario(TipoTransaccion.GASTO) }
+      ]}
+      onStateChange={({ open }) => setExpandido(open)}
+    />
   );
 };
 
@@ -212,9 +211,8 @@ const styles = StyleSheet.create({
   contenedorNavegacion: {
     flex: 1
   },
-  accionesRapidasContenedor: {
+  fabGlobal: {
     position: 'absolute',
-    right: 0,
-    left: 0
+    right: 16
   }
 });
