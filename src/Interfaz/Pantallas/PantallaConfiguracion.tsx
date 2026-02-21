@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, ScrollView } from 'react-native';
-import { Button, TextInput } from 'react-native-paper';
+import { Button } from 'react-native-paper';
+import { InputConCerrarTeclado } from '@/Interfaz/Componentes/InputConCerrarTeclado';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 
 export const PantallaConfiguracion = (): React.JSX.Element => {
@@ -17,7 +18,7 @@ export const PantallaConfiguracion = (): React.JSX.Element => {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
-      <TextInput label="Moneda (ISO)" value={monedaLocal} onChangeText={setMonedaLocal} />
+      <InputConCerrarTeclado label="Moneda (ISO)" value={monedaLocal} onChangeText={setMonedaLocal} />
       <Button mode="contained" onPress={() => GuardarMoneda(monedaLocal)}>Guardar moneda</Button>
       <Button mode="outlined" onPress={ExportarJson}>Exportar JSON</Button>
       <Button mode="outlined" onPress={ImportarJson}>Importar JSON</Button>

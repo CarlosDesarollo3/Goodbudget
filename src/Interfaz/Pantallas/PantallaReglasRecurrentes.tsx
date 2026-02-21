@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ScrollView } from 'react-native';
-import { Button, Card, Switch, Text, TextInput } from 'react-native-paper';
+import { Button, Card, Switch, Text } from 'react-native-paper';
+import { InputConCerrarTeclado } from '@/Interfaz/Componentes/InputConCerrarTeclado';
 import { formatISO } from 'date-fns';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 import { FormatearMoneda } from '@/Utilidades/Formatos';
@@ -14,10 +15,10 @@ export const PantallaReglasRecurrentes = (): React.JSX.Element => {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
-      <TextInput label="Cuenta origen" value={idCuentaOrigen} onChangeText={setIdCuentaOrigen} />
-      <TextInput label="Cuenta destino" value={idCuentaDestino} onChangeText={setIdCuentaDestino} />
-      <TextInput label="Día del mes" value={diaDelMes} onChangeText={setDiaDelMes} keyboardType="number-pad" />
-      <TextInput label="Monto" value={monto} onChangeText={setMonto} keyboardType="decimal-pad" />
+      <InputConCerrarTeclado label="Cuenta origen" value={idCuentaOrigen} onChangeText={setIdCuentaOrigen} />
+      <InputConCerrarTeclado label="Cuenta destino" value={idCuentaDestino} onChangeText={setIdCuentaDestino} />
+      <InputConCerrarTeclado label="Día del mes" value={diaDelMes} onChangeText={setDiaDelMes} keyboardType="number-pad" />
+      <InputConCerrarTeclado label="Monto" value={monto} onChangeText={setMonto} keyboardType="decimal-pad" />
       <Button
         mode="contained"
         onPress={() =>
