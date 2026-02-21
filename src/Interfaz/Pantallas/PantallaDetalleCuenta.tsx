@@ -119,31 +119,22 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
     return 'Rango de fechas activo';
   }, [fechaDesde, fechaHasta]);
 
-  const transaccionesFiltradas = React.useMemo(() => {
-    const terminoBusqueda = busqueda.trim().toLowerCase();
-    const inicio = ParsearFechaFiltro(fechaDesde);
-    const fin = ParsearFechaFiltro(fechaHasta, true);
+  const hayErrorRangoFecha = React.useMemo(() => {
+    // Si no hay valores, no hay error
+    if (!fechaDesde && !fechaHasta) return false;
 
-    if (hayErrorRangoFecha) {
-      return 'Corrige el formato de fecha para aplicar el rango personalizado';
-    }
+    const inicio = fechaDesde ? ParsearFechaFiltro(fechaDesde) : null;
+    const fin = fechaHasta ? ParsearFechaFiltro(fechaHasta, true) : null;
 
-    const formatearNatural = (timestamp: number): string => format(new Date(timestamp), "d 'de' MMMM yyyy", { locale: es });
+    // Fecha inválida
+    if ((fechaDesde && inicio === null) || (fechaHasta && fin === null)) return true;
 
-    if (inicio && fin) {
-      return `Desde ${formatearNatural(inicio)} hasta ${formatearNatural(fin)}`;
-    }
+    // Rango invertido
+    if (inicio !== null && fin !== null && inicio > fin) return true;
 
-    if (inicio) {
-      return `Desde ${formatearNatural(inicio)} en adelante`;
-    }
+    return false;
+  }, [fechaDesde, fechaHasta]);
 
-    if (fin) {
-      return `Hasta ${formatearNatural(fin)}`;
-    }
-
-    return 'Sin rango de fechas activo';
-  }, [fechaDesde, fechaHasta, hayErrorRangoFecha]);
 
   const transaccionesFiltradas = React.useMemo(() => {
     const terminoBusqueda = busqueda.trim().toLowerCase();
