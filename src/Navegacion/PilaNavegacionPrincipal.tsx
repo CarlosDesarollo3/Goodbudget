@@ -145,16 +145,19 @@ const AccionRapidaGlobal = ({
     setExpandido(false);
   };
 
+  const accionesTransaccion = [
+    { icon: 'arrow-up-bold-circle-outline', label: 'Ingreso', onPress: () => navegarFormulario(TipoTransaccion.INGRESO) },
+    { icon: 'swap-horizontal', label: 'Transferencia', onPress: () => navegarFormulario(TipoTransaccion.TRANSFERENCIA) },
+    { icon: 'arrow-down-bold-circle-outline', label: 'Gasto', onPress: () => navegarFormulario(TipoTransaccion.GASTO) }
+  ];
+
   const acciones = rutaActiva.nombre === 'PantallaInicio'
     ? [
+        ...accionesTransaccion,
         { icon: 'credit-card-plus-outline', label: 'Nueva cuenta', onPress: () => navegarInicioConAccion('cuenta') },
         { icon: 'folder-plus-outline', label: 'Nuevo grupo', onPress: () => navegarInicioConAccion('grupo') }
       ]
-    : [
-        { icon: 'arrow-up-bold-circle-outline', label: 'Ingreso', onPress: () => navegarFormulario(TipoTransaccion.INGRESO) },
-        { icon: 'swap-horizontal', label: 'Transferencia', onPress: () => navegarFormulario(TipoTransaccion.TRANSFERENCIA) },
-        { icon: 'arrow-down-bold-circle-outline', label: 'Gasto', onPress: () => navegarFormulario(TipoTransaccion.GASTO) }
-      ];
+    : accionesTransaccion;
 
   return (
     <FAB.Group
@@ -163,8 +166,8 @@ const AccionRapidaGlobal = ({
       icon={expandido ? 'close' : 'plus'}
       color={tema.colors.onPrimary}
       fabStyle={{ backgroundColor: tema.colors.primary }}
-      style={[styles.fabGlobal, { bottom:insets.bottom  }]}
-      backdropColor="rgba(0, 0, 0, 0)"
+      style={[styles.fabGlobal, { bottom: 74 + insets.bottom }]}
+      backdropColor="transparent"
       actions={acciones}
       onStateChange={({ open }) => setExpandido(open)}
     />
