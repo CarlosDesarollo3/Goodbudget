@@ -24,7 +24,7 @@ export const MenuCabecera = ({ navigation }: PropiedadesMenuCabecera): React.JSX
       <Menu.Item
         onPress={() => {
           setMenuVisible(false);
-          navigation.navigate('PantallaCategorias');
+          navigation.navigate('PantallaPestanasPrincipal', { screen: 'PantallaCategorias' });
         }}
         title="Categorías"
         leadingIcon="shape-outline"
@@ -32,7 +32,7 @@ export const MenuCabecera = ({ navigation }: PropiedadesMenuCabecera): React.JSX
       <Menu.Item
         onPress={() => {
           setMenuVisible(false);
-          navigation.navigate('PantallaReglasRecurrentes');
+          navigation.navigate('PantallaPestanasPrincipal', { screen: 'PantallaReglasRecurrentes' });
         }}
         title="Reglas recurrentes"
         leadingIcon="calendar-sync"
@@ -40,7 +40,7 @@ export const MenuCabecera = ({ navigation }: PropiedadesMenuCabecera): React.JSX
       <Menu.Item
         onPress={() => {
           setMenuVisible(false);
-          navigation.navigate('PantallaConfiguracion');
+          navigation.navigate('PantallaPestanasPrincipal', { screen: 'PantallaConfiguracion' });
         }}
         title="Configuración"
         leadingIcon="cog-outline"
