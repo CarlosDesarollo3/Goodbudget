@@ -31,6 +31,7 @@ export interface RepositorioReglas {
   ListarReglas(): ReglaRecurrente[];
   GuardarRegla(regla: ReglaRecurrente): void;
   ActualizarRegla(regla: ReglaRecurrente): void;
+  EliminarRegla(idRegla: string): void;
 }
 
 export interface RepositorioConfiguracion {

@@ -30,6 +30,8 @@ interface EstadoAplicacion {
   EliminarTransaccion(idTransaccion: string): void;
   CrearCategoria(nombre: string, color?: string): void;
   CrearReglaRecurrente(regla: Omit<ReglaRecurrente, 'id' | 'frecuencia' | 'creadoEn'>): void;
+  ActualizarReglaRecurrente(regla: ReglaRecurrente): void;
+  EliminarReglaRecurrente(idRegla: string): void;
   EjecutarReglasPendientes(): number;
   GuardarMoneda(moneda: string): void;
   ObtenerBalanceCuenta(idCuenta: string): number;
@@ -190,6 +192,16 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
       creadoEn: formatISO(new Date())
     };
     repositorio.GuardarRegla(nuevaRegla);
+    get().InicializarDatos();
+  },
+
+  ActualizarReglaRecurrente: (regla) => {
+    repositorio.ActualizarRegla(regla);
+    get().InicializarDatos();
+  },
+
+  EliminarReglaRecurrente: (idRegla) => {
+    repositorio.EliminarRegla(idRegla);
     get().InicializarDatos();
   },
 

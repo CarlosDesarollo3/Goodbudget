@@ -248,6 +248,10 @@ export class RepositorioSqlite
     );
   }
 
+  EliminarRegla(idRegla: string): void {
+    this.bd.runSync('DELETE FROM reglasRecurrentes WHERE id = ?', [idRegla]);
+  }
+
   ObtenerMoneda(): string {
     const fila = this.bd.getFirstSync<{ valor: string }>('SELECT valor FROM configuracion WHERE clave = ?', ['moneda']);
     return fila?.valor ?? 'MXN';
