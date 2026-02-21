@@ -26,12 +26,10 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
   const cuentas = React.useMemo(() => Object.values(cuentasPorGrupo).flat(), [cuentasPorGrupo]);
 
   const transaccionEditar = (route.params as { transaccion?: Transaccion } | undefined)?.transaccion;
-  const seccionesCuentas = React.useMemo(() => (
-    [
-      { id: CLAVE_CUENTAS_RAIZ, nombre: 'Cuentas principales' },
-      ...grupos.map((grupo) => ({ id: grupo.id, nombre: grupo.nombre }))
-    ].filter((seccion) => (cuentasPorGrupo[seccion.id] ?? []).length > 0)
-  ), [cuentasPorGrupo, grupos]);
+  const seccionesCuentas = React.useMemo(() => ([
+    { id: CLAVE_CUENTAS_RAIZ, nombre: 'Cuentas principales' },
+    ...grupos.map((grupo) => ({ id: grupo.id, nombre: grupo.nombre }))
+  ].filter((seccion) => (cuentasPorGrupo[seccion.id] ?? []).length > 0)), [cuentasPorGrupo, grupos]);
 
   const { control, handleSubmit, setValue, formState: { errors } } = useForm<ValoresFormulario>({
     resolver: zodResolver(EsquemaTransaccionFormulario),
@@ -56,6 +54,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
   const tipoSeleccionado = useWatch({ control, name: 'tipo' });
   const cuentaOrigenSeleccionada = useWatch({ control, name: 'idCuentaOrigen' });
   const cuentaDestinoSeleccionada = useWatch({ control, name: 'idCuentaDestino' });
+  const montoCapturado = useWatch({ control, name: 'monto' });
 
   React.useEffect(() => {
     if (!tipoSeleccionado) {
@@ -114,10 +113,67 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
   const requiereCategoria = tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.INGRESO;
   const requiereCuentaOrigen = tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.INGRESO || tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
   const requiereCuentaDestino = tipoSeleccionado === TipoTransaccion.AJUSTE || tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
+  const montoMostrado = montoCapturado ?? 0;
+  const montoConSigno = tipoSeleccionado === TipoTransaccion.GASTO ? -Math.abs(montoMostrado) : Math.abs(montoMostrado);
+
+  const colorMonto = montoConSigno === 0
+    ? styles.montoNeutro
+    : montoConSigno > 0
+      ? styles.montoPositivo
+      : styles.montoNegativo;
+
+  const selectorCuentas = (campo: 'idCuentaOrigen' | 'idCuentaDestino', sinSecciones = false): React.JSX.Element => (
+    <Controller
+      control={control}
+      name={campo}
+      render={({ field: { value, onChange } }) => (
+        sinSecciones ? (
+          <View style={styles.grupoChips}>
+            {cuentas.map((cuenta) => (
+              <Chip
+                key={`${campo}-${cuenta.id}`}
+                selected={value === cuenta.id}
+                compact
+                style={styles.chipEtiquetas}
+                onPress={() => onChange(cuenta.id)}
+              >
+                {cuenta.nombre}
+              </Chip>
+            ))}
+          </View>
+        ) : (
+          seccionesCuentas.map((seccion) => (
+            <React.Fragment key={`${campo}-${seccion.id}`}>
+              <HelperText type="info">{seccion.nombre}</HelperText>
+              <View style={styles.grupoChips}>
+                {(cuentasPorGrupo[seccion.id] ?? []).map((cuenta) => (
+                  <Chip
+                    key={`${campo}-${cuenta.id}`}
+                    selected={value === cuenta.id}
+                    compact
+                    style={styles.chipEtiquetas}
+                    onPress={() => onChange(cuenta.id)}
+                  >
+                    {cuenta.nombre}
+                  </Chip>
+                ))}
+              </View>
+            </React.Fragment>
+          ))
+        )
+      )}
+    />
+  );
 
   return (
     <ScrollView contentContainerStyle={styles.contenedor}>
       <Text variant="titleMedium">{transaccionEditar ? 'Editar transacción' : 'Nueva transacción'}</Text>
+
+      <View style={styles.resumenMonto}>
+        <Text variant="labelLarge">Monto</Text>
+        <Text variant="displaySmall" style={colorMonto}>{montoConSigno.toFixed(2)}</Text>
+      </View>
+
       <Controller
         control={control}
         name="tipo"
@@ -141,9 +197,10 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
         render={({ field: { value, onChange } }) => (
           <TextInput
             label="Monto"
-            placeholder="0.00"
-            value={value === undefined ? '' : String(value)}
+            mode="outlined"
+            value={value === undefined ? '0' : String(value)}
             keyboardType="decimal-pad"
+            style={styles.inputMejorado}
             onChangeText={(texto) => onChange(texto === '' ? undefined : Number(texto.replace(',', '.')))}
           />
         )}
@@ -153,44 +210,22 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
       {requiereCuentaOrigen ? (
         <View style={styles.bloqueCampo}>
           <Text variant="labelLarge">Cuenta origen</Text>
-          {seccionesCuentas.map((seccion) => (
-            <React.Fragment key={`origen-${seccion.id}`}>
-              <HelperText type="info">{seccion.nombre}</HelperText>
-              <Controller
-                control={control}
-                name="idCuentaOrigen"
-                render={({ field: { value, onChange } }) => (
-                  <View style={styles.grupoChips}>
-                    {(cuentasPorGrupo[seccion.id] ?? []).map((cuenta) => (
-                      <Chip key={cuenta.id} selected={value === cuenta.id} onPress={() => onChange(cuenta.id)}>{cuenta.nombre}</Chip>
-                    ))}
-                  </View>
-                )}
-              />
-            </React.Fragment>
-          ))}
+          {selectorCuentas('idCuentaOrigen', tipoSeleccionado === TipoTransaccion.TRANSFERENCIA)}
+        </View>
+      ) : null}
+
+      {tipoSeleccionado === TipoTransaccion.TRANSFERENCIA ? (
+        <View style={styles.flechasTransferencia}>
+          <Text variant="headlineSmall">⬇︎</Text>
+          <Text variant="labelMedium">se transfiere</Text>
+          <Text variant="headlineSmall">⬇︎</Text>
         </View>
       ) : null}
 
       {requiereCuentaDestino ? (
         <View style={styles.bloqueCampo}>
           <Text variant="labelLarge">Cuenta destino</Text>
-          {seccionesCuentas.map((seccion) => (
-            <React.Fragment key={`destino-${seccion.id}`}>
-              <HelperText type="info">{seccion.nombre}</HelperText>
-              <Controller
-                control={control}
-                name="idCuentaDestino"
-                render={({ field: { value, onChange } }) => (
-                  <View style={styles.grupoChips}>
-                    {(cuentasPorGrupo[seccion.id] ?? []).map((cuenta) => (
-                      <Chip key={cuenta.id} selected={value === cuenta.id} onPress={() => onChange(cuenta.id)}>{cuenta.nombre}</Chip>
-                    ))}
-                  </View>
-                )}
-              />
-            </React.Fragment>
-          ))}
+          {selectorCuentas('idCuentaDestino', tipoSeleccionado === TipoTransaccion.TRANSFERENCIA)}
         </View>
       ) : null}
 
@@ -204,7 +239,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
               render={({ field: { value, onChange } }) => (
                 <View style={styles.grupoChips}>
                   {categorias.map((categoria) => (
-                    <Chip key={categoria.id} selected={value === categoria.id} onPress={() => onChange(categoria.id)}>{categoria.nombre}</Chip>
+                    <Chip key={categoria.id} selected={value === categoria.id} compact style={styles.chipEtiquetas} onPress={() => onChange(categoria.id)}>{categoria.nombre}</Chip>
                   ))}
                 </View>
               )}
@@ -219,8 +254,10 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
         render={({ field: { value, onChange } }) => (
           <TextInput
             label="Nota (opcional)"
+            mode="outlined"
             placeholder="Descripción breve"
             value={value}
+            style={styles.inputMejorado}
             onChangeText={onChange}
           />
         )}
@@ -235,14 +272,42 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
 const styles = StyleSheet.create({
   contenedor: {
     padding: 16,
-    gap: 10
+    gap: 10,
+    paddingBottom: 32
+  },
+  resumenMonto: {
+    borderRadius: 12,
+    padding: 14,
+    backgroundColor: '#F4F5F7',
+    gap: 4,
+    alignItems: 'center'
   },
   bloqueCampo: {
     gap: 4
+  },
+  montoPositivo: {
+    color: '#1F8F4C'
+  },
+  montoNegativo: {
+    color: '#C4362D'
+  },
+  montoNeutro: {
+    color: '#7A7A7A'
+  },
+  inputMejorado: {
+    backgroundColor: '#FFFFFF'
   },
   grupoChips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8
+  },
+  chipEtiquetas: {
+    borderRadius: 18
+  },
+  flechasTransferencia: {
+    alignItems: 'center',
+    gap: 2,
+    marginVertical: -2
   }
 });
