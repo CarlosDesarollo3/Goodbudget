@@ -1,9 +1,11 @@
-import { Categoria, Cuenta, Grupo, ReglaRecurrente, Transaccion } from '@/Dominio/Modelos';
+import { AvanceObjetivoPresupuesto, Categoria, Cuenta, Grupo, ObjetivoPresupuesto, ReglaRecurrente, Transaccion, TipoTransaccion } from '@/Dominio/Modelos';
 import { ErrorDatos, RegistrarLogDesarrollo } from '@/Utilidades/Errores';
+import { ModoTema } from '@/Interfaz/Tema/temaAplicacion';
 import { ObtenerBd } from '../Bd/ConexionBd';
 import {
   RepositorioCategorias,
   RepositorioConfiguracion,
+  RepositorioObjetivosPresupuesto,
   RepositorioReglas,
   RepositorioSobres,
   RepositorioTransacciones
@@ -11,10 +13,39 @@ import {
 
 const MapearBooleano = (valor: number): boolean => valor === 1;
 
+const ObtenerMesReferencia = (fecha = new Date()): string => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+
+const ObtenerRangoMes = (mesReferencia: string): { inicio: string; fin: string; mesAnterior: string } => {
+  const [anioTexto, mesTexto] = mesReferencia.split('-');
+  const anio = Number(anioTexto);
+  const mes = Number(mesTexto);
+  const inicioFecha = new Date(anio, mes - 1, 1);
+  const finFecha = new Date(anio, mes, 1);
+  const anteriorFecha = new Date(anio, mes - 2, 1);
+
+  const formatear = (fecha: Date): string => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+
+  return {
+    inicio: inicioFecha.toISOString(),
+    fin: finFecha.toISOString(),
+    mesAnterior: formatear(anteriorFecha)
+  };
+};
+
 export class RepositorioSqlite
-  implements RepositorioSobres, RepositorioTransacciones, RepositorioCategorias, RepositorioReglas, RepositorioConfiguracion
+  implements RepositorioSobres, RepositorioTransacciones, RepositorioCategorias, RepositorioReglas, RepositorioConfiguracion, RepositorioObjetivosPresupuesto
 {
   private bd = ObtenerBd();
+
+  private ExisteCategoriaConNombre(nombre: string, idExcluir?: string): boolean {
+    const nombreNormalizado = nombre.trim().toLowerCase();
+    const resultado = this.bd.getFirstSync<{ total: number }>(
+      'SELECT COUNT(*) AS total FROM categorias WHERE LOWER(TRIM(nombre)) = ? AND (? IS NULL OR id != ?)',
+      [nombreNormalizado, idExcluir ?? null, idExcluir ?? null]
+    );
+
+    return (resultado?.total ?? 0) > 0;
+  }
 
   ListarGrupos(): Grupo[] {
     try {
@@ -141,12 +172,29 @@ export class RepositorioSqlite
   }
 
   CrearCategoria(categoria: Categoria): void {
+    if (this.ExisteCategoriaConNombre(categoria.nombre)) {
+      throw new ErrorDatos('Ya existe una categoría con ese nombre');
+    }
+
     this.bd.runSync('INSERT INTO categorias (id,nombre,color,icono,creadoEn) VALUES (?,?,?,?,?)', [
       categoria.id,
       categoria.nombre,
       categoria.color,
       categoria.icono,
       categoria.creadoEn
+    ]);
+  }
+
+  ActualizarCategoria(categoria: Pick<Categoria, 'id' | 'nombre' | 'color' | 'icono'>): void {
+    if (this.ExisteCategoriaConNombre(categoria.nombre, categoria.id)) {
+      throw new ErrorDatos('Ya existe una categoría con ese nombre');
+    }
+
+    this.bd.runSync('UPDATE categorias SET nombre = ?, color = ?, icono = ? WHERE id = ?', [
+      categoria.nombre,
+      categoria.color,
+      categoria.icono,
+      categoria.id
     ]);
   }
 
@@ -264,12 +312,224 @@ export class RepositorioSqlite
     );
   }
 
+
+  ListarObjetivosPresupuesto(): ObjetivoPresupuesto[] {
+    const filas = this.bd.getAllSync<(Omit<ObjetivoPresupuesto, 'rolloverHabilitado' | 'activo'> & { rolloverHabilitado: number; activo: number })>(
+      'SELECT * FROM objetivosPresupuesto ORDER BY creadoEn DESC'
+    );
+    return filas.map((fila) => ({
+      ...fila,
+      rolloverHabilitado: MapearBooleano(fila.rolloverHabilitado),
+      activo: MapearBooleano(fila.activo)
+    }));
+  }
+
+  GuardarObjetivoPresupuesto(objetivo: ObjetivoPresupuesto): void {
+    this.bd.runSync(
+      `INSERT INTO objetivosPresupuesto
+       (id,idCuenta,idCategoria,montoMensual,umbralAlerta,rolloverHabilitado,activo,creadoEn,actualizadoEn)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+      [
+        objetivo.id,
+        objetivo.idCuenta,
+        objetivo.idCategoria,
+        objetivo.montoMensual,
+        objetivo.umbralAlerta,
+        objetivo.rolloverHabilitado ? 1 : 0,
+        objetivo.activo ? 1 : 0,
+        objetivo.creadoEn,
+        objetivo.actualizadoEn
+      ]
+    );
+  }
+
+  ActualizarObjetivoPresupuesto(objetivo: ObjetivoPresupuesto): void {
+    this.bd.runSync(
+      `UPDATE objetivosPresupuesto
+       SET idCuenta = ?, idCategoria = ?, montoMensual = ?, umbralAlerta = ?, rolloverHabilitado = ?, activo = ?, actualizadoEn = ?
+       WHERE id = ?`,
+      [
+        objetivo.idCuenta,
+        objetivo.idCategoria,
+        objetivo.montoMensual,
+        objetivo.umbralAlerta,
+        objetivo.rolloverHabilitado ? 1 : 0,
+        objetivo.activo ? 1 : 0,
+        objetivo.actualizadoEn,
+        objetivo.id
+      ]
+    );
+  }
+
+  EliminarObjetivoPresupuesto(idObjetivo: string): void {
+    this.bd.runSync('DELETE FROM objetivosPresupuesto WHERE id = ?', [idObjetivo]);
+  }
+
+  CalcularAvanceObjetivo(idObjetivo: string, mesReferencia = ObtenerMesReferencia()): AvanceObjetivoPresupuesto | null {
+    const objetivo = this.ListarObjetivosPresupuesto().find((item) => item.id === idObjetivo);
+
+    if (!objetivo || !objetivo.activo) {
+      return null;
+    }
+
+    return this.ConstruirAvanceObjetivo(objetivo, mesReferencia);
+  }
+
+  ListarAvancesObjetivos(mesReferencia = ObtenerMesReferencia(), idCuenta?: string): AvanceObjetivoPresupuesto[] {
+    const objetivos = this.ListarObjetivosPresupuesto().filter((objetivo) => objetivo.activo && (!idCuenta || objetivo.idCuenta === idCuenta));
+    return objetivos
+      .map((objetivo) => this.ConstruirAvanceObjetivo(objetivo, mesReferencia))
+      .sort((a, b) => b.progreso - a.progreso);
+  }
+
+  private ObtenerGastoCategoriaEnMes(idCuenta: string, idCategoria: string, inicio: string, fin: string): number {
+    const resultado = this.bd.getFirstSync<{ total: number }>(
+      `SELECT COALESCE(SUM(monto), 0) as total
+       FROM transacciones
+       WHERE tipo = ?
+         AND idCuentaOrigen = ?
+         AND idCategoria = ?
+         AND fecha >= ?
+         AND fecha < ?`,
+      [TipoTransaccion.GASTO, idCuenta, idCategoria, inicio, fin]
+    );
+
+    return resultado?.total ?? 0;
+  }
+
+  private ConstruirAvanceObjetivo(objetivo: ObjetivoPresupuesto, mesReferencia: string): AvanceObjetivoPresupuesto {
+    const rangoMes = ObtenerRangoMes(mesReferencia);
+    const gastoActual = this.ObtenerGastoCategoriaEnMes(objetivo.idCuenta, objetivo.idCategoria, rangoMes.inicio, rangoMes.fin);
+    let presupuestoDisponible = objetivo.montoMensual;
+
+    if (objetivo.rolloverHabilitado) {
+      const rangoAnterior = ObtenerRangoMes(rangoMes.mesAnterior);
+      const gastoMesAnterior = this.ObtenerGastoCategoriaEnMes(
+        objetivo.idCuenta,
+        objetivo.idCategoria,
+        rangoAnterior.inicio,
+        rangoAnterior.fin
+      );
+      const sobranteAnterior = Math.max(0, objetivo.montoMensual - gastoMesAnterior);
+      presupuestoDisponible += sobranteAnterior;
+    }
+
+    const progreso = presupuestoDisponible <= 0 ? 0 : gastoActual / presupuestoDisponible;
+
+    return {
+      objetivo,
+      mesReferencia,
+      presupuestoDisponible,
+      gastoActual,
+      progreso,
+      excedido: gastoActual > presupuestoDisponible,
+      alertaUmbral: progreso >= objetivo.umbralAlerta
+    };
+  }
+
   ObtenerMoneda(): string {
-    const fila = this.bd.getFirstSync<{ valor: string }>('SELECT valor FROM configuracion WHERE clave = ?', ['moneda']);
-    return fila?.valor ?? 'MXN';
+    return this.ObtenerValorConfiguracion('moneda') ?? 'MXN';
   }
 
   GuardarMoneda(moneda: string): void {
-    this.bd.runSync('INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?,?)', ['moneda', moneda]);
+    this.GuardarValorConfiguracion('moneda', moneda);
+  }
+
+  ObtenerValorConfiguracion(clave: string): string | null {
+    const fila = this.bd.getFirstSync<{ valor: string }>('SELECT valor FROM configuracion WHERE clave = ?', [clave]);
+    return fila?.valor ?? null;
+  }
+
+  GuardarValorConfiguracion(clave: string, valor?: string): void {
+    if (!valor) {
+      this.bd.runSync('DELETE FROM configuracion WHERE clave = ?', [clave]);
+      return;
+    }
+
+    this.bd.runSync('INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?,?)', [clave, valor]);
+  }
+
+  ExportarDatos(): RespaldoDatos {
+    return {
+      grupos: this.VolcarTabla<Grupo>('grupos'),
+      cuentas: this.VolcarTabla<Cuenta>('cuentas'),
+      categorias: this.VolcarTabla<Categoria>('categorias'),
+      transacciones: this.VolcarTabla<Transaccion>('transacciones'),
+      reglasRecurrentes: this.VolcarTabla<Omit<ReglaRecurrente, 'habilitada'> & { habilitada: number }>('reglasRecurrentes'),
+      configuracion: this.VolcarTabla<{ clave: string; valor: string }>('configuracion')
+    };
+  }
+
+  ImportarDatos(datos: RespaldoDatos): void {
+    try {
+      this.bd.withTransactionSync(() => {
+        this.LimpiarTablasParaImportacion();
+        this.ReinsertarFilasTabla('grupos', ['id', 'nombre', 'idGrupoPadre', 'creadoEn'], datos.grupos);
+        this.ReinsertarFilasTabla('cuentas', ['id', 'nombre', 'idGrupoPadre', 'creadoEn'], datos.cuentas);
+        this.ReinsertarFilasTabla('categorias', ['id', 'nombre', 'color', 'icono', 'creadoEn'], datos.categorias);
+        this.ReinsertarFilasTabla(
+          'transacciones',
+          ['id', 'tipo', 'monto', 'idCuentaOrigen', 'idCuentaDestino', 'idCategoria', 'nota', 'fecha', 'creadoEn', 'referenciaIdempotencia'],
+          datos.transacciones
+        );
+        this.ReinsertarFilasTabla(
+          'reglasRecurrentes',
+          [
+            'id',
+            'habilitada',
+            'frecuencia',
+            'diaDelMes',
+            'idCuentaOrigen',
+            'idCuentaDestino',
+            'monto',
+            'etiqueta',
+            'ultimaEjecucionEn',
+            'proximaEjecucionEn',
+            'creadoEn'
+          ],
+          datos.reglasRecurrentes
+        );
+        this.ReinsertarFilasTabla('configuracion', ['clave', 'valor'], datos.configuracion);
+      });
+    } catch (error) {
+      throw new ErrorDatos('No se pudieron importar los datos de respaldo', error);
+    }
+  }
+
+  private VolcarTabla<T>(nombreTabla: string): T[] {
+    return this.bd.getAllSync<T>(`SELECT * FROM ${nombreTabla}`);
+  }
+
+  private ReinsertarFilasTabla<T extends object>(nombreTabla: string, columnas: string[], filas: T[]): void {
+    if (filas.length === 0) {
+      return;
+    }
+
+    const marcadores = columnas.map(() => '?').join(',');
+    const sentencia = `INSERT INTO ${nombreTabla} (${columnas.join(',')}) VALUES (${marcadores})`;
+
+    filas.forEach((fila) => {
+      const valores = columnas.map((columna) => (fila as Record<string, unknown>)[columna] ?? null);
+      this.bd.runSync(sentencia, valores);
+    });
+  }
+
+  private LimpiarTablasParaImportacion(): void {
+    ['transacciones', 'reglasRecurrentes', 'categorias', 'cuentas', 'grupos', 'configuracion'].forEach((tabla) => {
+      this.bd.runSync(`DELETE FROM ${tabla}`);
+    });
+  }
+
+  ObtenerModoTema(): ModoTema {
+    const fila = this.bd.getFirstSync<{ valor: string }>('SELECT valor FROM configuracion WHERE clave = ?', ['modoTema']);
+    if (fila?.valor === 'claro' || fila?.valor === 'oscuro' || fila?.valor === 'sistema') {
+      return fila.valor;
+    }
+
+    return 'sistema';
+  }
+
+  GuardarModoTema(modoTema: ModoTema): void {
+    this.bd.runSync('INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?,?)', ['modoTema', modoTema]);
   }
 }

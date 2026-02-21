@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Dialog, Portal, Snackbar, Surface, Text } from 'react-native-paper';
+import { Button, Dialog, Portal, ProgressBar, Surface, Text } from 'react-native-paper';
 import { FormatearMoneda } from '@/Utilidades/Formatos';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -10,17 +10,43 @@ import { FilaTransaccion } from '@/Interfaz/Componentes/FilaTransaccion';
 import { RepositorioSqlite } from '@/Datos/Repositorios/RepositorioSqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CerrarFilaAbierta, FilaDeslizableAcciones } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
-import { Transaccion } from '@/Dominio/Modelos';
+import { TipoTransaccion, Transaccion } from '@/Dominio/Modelos';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const repositorio = new RepositorioSqlite();
+type FiltroTipoTransaccion = 'TODOS' | TipoTransaccion.GASTO | TipoTransaccion.INGRESO | TipoTransaccion.TRANSFERENCIA;
+
+const ParsearFechaFiltro = (valor: string, finDeDia = false): number | null => {
+  const valorNormalizado = valor.trim();
+
+  if (!valorNormalizado) {
+    return null;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valorNormalizado)) {
+    return null;
+  }
+
+  const sufijoHora = finDeDia ? 'T23:59:59.999' : 'T00:00:00.000';
+  const fecha = new Date(`${valorNormalizado}${sufijoHora}`);
+  const timestamp = fecha.getTime();
+
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
 
 export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaDetalleCuenta'>): React.JSX.Element => {
   const { idCuenta } = route.params;
-  const { ObtenerBalanceCuenta, moneda, ConvertirCuentaEnGrupo, EliminarTransaccion } = UsarAlmacenAplicacion();
+  const { ObtenerBalanceCuenta, moneda, ConvertirCuentaEnGrupo, EliminarTransaccion, ListarAvancesObjetivos, categorias } = UsarAlmacenAplicacion();
   const insets = useSafeAreaInsets();
   const [transacciones, setTransacciones] = React.useState<Transaccion[]>([]);
+  const [busqueda, setBusqueda] = React.useState('');
+  const [filtroTipo, setFiltroTipo] = React.useState<FiltroTipoTransaccion>('TODOS');
+  const [fechaDesde, setFechaDesde] = React.useState('');
+  const [fechaHasta, setFechaHasta] = React.useState('');
   const [transaccionEliminar, setTransaccionEliminar] = React.useState<Transaccion | null>(null);
   const [mostrarAvisoGesto, setMostrarAvisoGesto] = React.useState(false);
+  const [avisoObjetivo, setAvisoObjetivo] = React.useState<string | null>(null);
 
   const recargarTransacciones = React.useCallback((): void => {
     setTransacciones(repositorio.ListarTransaccionesPorCuenta(idCuenta));
@@ -32,7 +58,74 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
     }, [recargarTransacciones])
   );
 
+  const categoriasPorId = React.useMemo(() => {
+    return categorias.reduce<Record<string, string>>((acumulado, categoria) => {
+      acumulado[categoria.id] = categoria.nombre;
+      return acumulado;
+    }, {});
+  }, [categorias]);
+
+  const transaccionesFiltradas = React.useMemo(() => {
+    const terminoBusqueda = busqueda.trim().toLowerCase();
+    const inicio = ParsearFechaFiltro(fechaDesde);
+    const fin = ParsearFechaFiltro(fechaHasta, true);
+
+    return transacciones.filter((transaccion) => {
+      const nota = transaccion.nota?.toLowerCase() ?? '';
+      const categoria = (transaccion.idCategoria ? categoriasPorId[transaccion.idCategoria] : '')?.toLowerCase() ?? '';
+      const coincideBusqueda = !terminoBusqueda || nota.includes(terminoBusqueda) || categoria.includes(terminoBusqueda);
+
+      const coincideTipo = filtroTipo === 'TODOS' || transaccion.tipo === filtroTipo;
+
+      const fechaTransaccion = new Date(transaccion.fecha).getTime();
+      const coincideFechaInicio = inicio === null || fechaTransaccion >= inicio;
+      const coincideFechaFin = fin === null || fechaTransaccion <= fin;
+
+      return coincideBusqueda && coincideTipo && coincideFechaInicio && coincideFechaFin;
+    });
+  }, [busqueda, categoriasPorId, fechaDesde, fechaHasta, filtroTipo, transacciones]);
+
+  const transaccionesAgrupadasPorMes = React.useMemo(() => {
+    return transaccionesFiltradas.reduce<Array<{ clave: string; titulo: string; transacciones: Transaccion[] }>>((acumulado, transaccion) => {
+      const fecha = new Date(transaccion.fecha);
+      const claveMes = format(fecha, 'yyyy-MM');
+      const tituloMes = format(fecha, 'MMMM yyyy', { locale: es });
+      const grupoExistente = acumulado[acumulado.length - 1];
+
+      if (!grupoExistente || grupoExistente.clave !== claveMes) {
+        acumulado.push({
+          clave: claveMes,
+          titulo: tituloMes.charAt(0).toUpperCase() + tituloMes.slice(1),
+          transacciones: [transaccion]
+        });
+        return acumulado;
+      }
+
+      grupoExistente.transacciones.push(transaccion);
+      return acumulado;
+    }, []);
+  }, [transaccionesFiltradas]);
+
   const balanceCuenta = ObtenerBalanceCuenta(idCuenta);
+  const avances = React.useMemo(() => ListarAvancesObjetivos(idCuenta), [ListarAvancesObjetivos, idCuenta]);
+
+  React.useEffect(() => {
+    const hoy = new Date();
+    const alerta = avances.find((avance) => avance.excedido || avance.alertaUmbral);
+
+    if (!alerta) {
+      return;
+    }
+
+    if (alerta.excedido) {
+      setAvisoObjetivo('Sobregasto en una categoría con objetivo activo.');
+      return;
+    }
+
+    if (hoy.getDate() >= 26) {
+      setAvisoObjetivo('Vencimiento cercano: revisa tus objetivos mensuales.');
+    }
+  }, [avances]);
 
   const confirmarEliminacion = (): void => {
     if (!transaccionEliminar) {
@@ -51,6 +144,27 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
         <Text variant="headlineSmall" style={balanceCuenta >= 0 ? styles.montoPositivo : styles.montoNegativo}>
           {FormatearMoneda(balanceCuenta, moneda)}
         </Text>
+      </Surface>
+
+      <Surface style={styles.tarjetaTotal} elevation={1}>
+        <Text variant="labelLarge" style={styles.textoSecundario}>Objetivos de presupuesto</Text>
+        {avances.length === 0 ? (
+          <Text variant="bodySmall" style={styles.textoSecundario}>Sin objetivos configurados para esta cuenta.</Text>
+        ) : (
+          avances.map((avance) => {
+            const categoria = categorias.find((item) => item.id === avance.objetivo.idCategoria)?.nombre ?? avance.objetivo.idCategoria;
+            const progreso = Math.max(0, Math.min(avance.progreso, 1));
+            return (
+              <View key={avance.objetivo.id} style={styles.bloqueObjetivo}>
+                <Text variant="bodySmall">{categoria}</Text>
+                <ProgressBar progress={progreso} color={avance.excedido || avance.alertaUmbral ? '#C4362D' : '#1F8F4C'} style={styles.barraObjetivo} />
+                <Text variant="labelSmall" style={avance.excedido ? styles.montoNegativo : styles.textoSecundario}>
+                  {Math.round(avance.progreso * 100)}% · {FormatearMoneda(avance.gastoActual, moneda)} / {FormatearMoneda(avance.presupuestoDisponible, moneda)}
+                </Text>
+              </View>
+            );
+          })
+        )}
       </Surface>
 
       <ScrollView
@@ -75,6 +189,7 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
               idCuentaContexto={idCuenta}
               moneda={moneda}
               onPress={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
+              onDuplicar={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion, duplicar: true })}
             />
           </FilaDeslizableAcciones>
         ))}
@@ -116,9 +231,8 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
         </Dialog>
       </Portal>
 
-      <Snackbar visible={mostrarAvisoGesto} onDismiss={() => setMostrarAvisoGesto(false)} duration={1800}>
-        Completa el gesto para activar la acción
-      </Snackbar>
+      {mostrarAvisoGesto && <Text style={[styles.avisoTexto, { bottom: 82 + insets.bottom }]}>Completa el gesto para activar la acción</Text>}
+      {avisoObjetivo && <Text style={[styles.avisoTexto, { bottom: 126 + insets.bottom }]}>{avisoObjetivo}</Text>}
     </View>
   );
 };
@@ -137,6 +251,23 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: '#FFFFFF'
   },
+  tarjetaFiltros: {
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    gap: 10,
+    backgroundColor: '#FFFFFF'
+  },
+  segmentosTipo: {
+    marginTop: 2
+  },
+  filaFechas: {
+    flexDirection: 'row',
+    gap: 8
+  },
+  inputFecha: {
+    flex: 1
+  },
   textoSecundario: {
     opacity: 0.75,
     marginBottom: 4
@@ -146,6 +277,14 @@ const styles = StyleSheet.create({
   },
   montoNegativo: {
     color: '#C4362D'
+  },
+  bloqueObjetivo: {
+    marginTop: 8,
+    gap: 4
+  },
+  barraObjetivo: {
+    height: 8,
+    borderRadius: 8
   },
   listaContenedora: {},
   accionesInferiores: {
@@ -159,5 +298,16 @@ const styles = StyleSheet.create({
   botonAccion: {
     flex: 1,
     maxWidth: 220
+  },
+  avisoTexto: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 80,
+    backgroundColor: '#2F3B4A',
+    color: '#FFF',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8
   }
 });

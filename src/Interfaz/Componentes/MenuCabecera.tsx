@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Appbar, Menu } from 'react-native-paper';
+import { Appbar, Menu, useTheme } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
+import { TemaAplicacion } from '@/Interfaz/Tema/temaAplicacion';
 
 type PropiedadesMenuCabecera = {
   navigation: NativeStackNavigationProp<ParametrosNavegacion>;
@@ -10,6 +11,7 @@ type PropiedadesMenuCabecera = {
 
 export const MenuCabecera = ({ navigation }: PropiedadesMenuCabecera): React.JSX.Element => {
   const [menuVisible, setMenuVisible] = useState(false);
+  const tema = useTheme<TemaAplicacion>();
 
   return (
     <Menu
@@ -17,14 +19,20 @@ export const MenuCabecera = ({ navigation }: PropiedadesMenuCabecera): React.JSX
       onDismiss={() => setMenuVisible(false)}
       anchor={
         <View style={styles.anclaMenu}>
-          <Appbar.Action icon="menu" iconColor="#000000" style={styles.botonMenu} onPress={() => setMenuVisible(true)} accessibilityLabel="Abrir menú" />
+          <Appbar.Action
+            icon="menu"
+            iconColor={tema.colors.onSurface}
+            style={styles.botonMenu}
+            onPress={() => setMenuVisible(true)}
+            accessibilityLabel="Abrir menú"
+          />
         </View>
       }
     >
       <Menu.Item
         onPress={() => {
           setMenuVisible(false);
-          navigation.navigate('PantallaCategorias');
+          navigation.navigate('PantallaPestanasPrincipal', { screen: 'PantallaCategorias' });
         }}
         title="Categorías"
         leadingIcon="shape-outline"
@@ -32,7 +40,7 @@ export const MenuCabecera = ({ navigation }: PropiedadesMenuCabecera): React.JSX
       <Menu.Item
         onPress={() => {
           setMenuVisible(false);
-          navigation.navigate('PantallaReglasRecurrentes');
+          navigation.navigate('PantallaPestanasPrincipal', { screen: 'PantallaReglasRecurrentes' });
         }}
         title="Reglas recurrentes"
         leadingIcon="calendar-sync"
