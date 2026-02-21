@@ -7,6 +7,7 @@ import { TarjetaCuenta } from '@/Interfaz/Componentes/TarjetaCuenta';
 import { TarjetaGrupo } from '@/Interfaz/Componentes/TarjetaGrupo';
 import { FilaDeslizableAcciones, CerrarFilaAbierta } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type TipoNodo = 'grupo' | 'cuenta';
 
@@ -24,6 +25,7 @@ interface CreacionPendiente {
 
 export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaDetalleGrupo'>): React.JSX.Element => {
   const { idGrupo } = route.params;
+  const insets = useSafeAreaInsets();
   const {
     grupos,
     cuentasPorGrupo,
@@ -110,7 +112,7 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
 
   return (
     <View style={styles.contenedor}>
-      <ScrollView contentContainerStyle={styles.contenido} onStartShouldSetResponder={() => { CerrarFilaAbierta(); return false; }}>
+      <ScrollView contentContainerStyle={[styles.contenido, { paddingBottom: 100 + insets.bottom }]} onStartShouldSetResponder={() => { CerrarFilaAbierta(); return false; }}>
         {subgrupos.map((grupo) => (
           <FilaDeslizableAcciones
             key={grupo.id}
@@ -146,7 +148,7 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
         ))}
       </ScrollView>
 
-      <View style={styles.accionesInferiores}>
+      <View style={[styles.accionesInferiores, { bottom: 12 + insets.bottom }]}>
         <Button mode="contained" onPress={() => abrirDialogoCreacion('cuenta')}>Crear cuenta</Button>
         <Button mode="outlined" onPress={() => abrirDialogoCreacion('grupo')}>Crear subgrupo</Button>
       </View>
@@ -199,14 +201,12 @@ const styles = StyleSheet.create({
     padding: 16
   },
   contenido: {
-    paddingBottom: 88,
     gap: 8
   },
   accionesInferiores: {
     position: 'absolute',
     left: 16,
     right: 16,
-    bottom: 16,
     flexDirection: 'row',
     gap: 8
   }

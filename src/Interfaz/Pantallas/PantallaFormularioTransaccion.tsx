@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Button, Chip, HelperText, Modal, Portal, SegmentedButtons, Text, TextInput } from 'react-native-paper';
@@ -9,6 +9,7 @@ import { EsquemaTransaccionFormulario } from '@/Dominio/Esquemas';
 import { TipoTransaccion, Transaccion } from '@/Dominio/Modelos';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ValoresFormulario = {
   tipo: TipoTransaccion;
@@ -22,7 +23,8 @@ type ValoresFormulario = {
 
 export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaFormularioTransaccion'>): React.JSX.Element => {
   const idCuentaPredeterminada = route.params?.idCuentaPredeterminada;
-  const { categorias, cuentasPorGrupo, RegistrarTransaccion, ActualizarTransaccion } = UsarAlmacenAplicacion();
+  const { categorias, cuentasPorGrupo, moneda, RegistrarTransaccion, ActualizarTransaccion } = UsarAlmacenAplicacion();
+  const insets = useSafeAreaInsets();
   const cuentas = React.useMemo(() => Object.values(cuentasPorGrupo).flat(), [cuentasPorGrupo]);
 
   const transaccionEditar = (route.params as { transaccion?: Transaccion } | undefined)?.transaccion;
@@ -136,6 +138,10 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
     : tipoSeleccionado === TipoTransaccion.INGRESO
       ? '#1F8F4C'
       : '#7A7A7A';
+  const simboloMoneda = React.useMemo(() => {
+    const partes = new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda }).formatToParts(0);
+    return partes.find((parte) => parte.type === 'currency')?.value ?? moneda;
+  }, [moneda]);
 
   const abrirSelectorCuentas = (campo: 'idCuentaOrigen' | 'idCuentaDestino'): void => {
     setBusquedaCuenta('');
@@ -143,11 +149,15 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.contenedor}>
-      <Text variant="titleMedium" style={styles.tituloPantalla}>{transaccionEditar ? 'Editar transacción' : 'Nueva transacción'}</Text>
+    <KeyboardAvoidingView
+      style={styles.pantalla}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={88}
+    >
+      <ScrollView contentContainerStyle={[styles.contenedor, { paddingBottom: 24 + insets.bottom }]} keyboardShouldPersistTaps="handled">
 
       <View style={styles.resumenMonto}>
-        <Text variant="labelLarge">Monto</Text>
+        <Text variant="labelLarge">Monto ({simboloMoneda})</Text>
         <Controller
           control={control}
           name="monto"
@@ -158,7 +168,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
               underlineColor="transparent"
               activeUnderlineColor="transparent"
               keyboardType="decimal-pad"
-              value={value === undefined ? '0' : String(value)}
+              value={value === undefined ? '' : String(value)}
               onChangeText={(texto) => onChange(texto === '' ? undefined : Number(texto.replace(',', '.')))}
               textColor={colorMontoTexto}
               style={[styles.inputMontoSuperior, colorMonto]}
@@ -293,18 +303,18 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
           </ScrollView>
         </Modal>
       </Portal>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
+  pantalla: {
+    flex: 1
+  },
   contenedor: {
     padding: 16,
-    gap: 10,
-    paddingBottom: 32
-  },
-  tituloPantalla: {
-    textAlign: 'center'
+    gap: 10
   },
   resumenMonto: {
     borderRadius: 12,

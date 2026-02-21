@@ -7,12 +7,14 @@ import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 import { FilaTransaccion } from '@/Interfaz/Componentes/FilaTransaccion';
 import { RepositorioSqlite } from '@/Datos/Repositorios/RepositorioSqlite';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const repositorio = new RepositorioSqlite();
 
 export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaDetalleCuenta'>): React.JSX.Element => {
   const { idCuenta } = route.params;
   const { ObtenerBalanceCuenta, moneda, ConvertirCuentaEnGrupo } = UsarAlmacenAplicacion();
+  const insets = useSafeAreaInsets();
   const [transacciones, setTransacciones] = React.useState(() => repositorio.ListarTransaccionesPorCuenta(idCuenta));
 
   useFocusEffect(
@@ -32,7 +34,7 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
         </Text>
       </Surface>
 
-      <ScrollView contentContainerStyle={styles.listaContenedora}>
+      <ScrollView contentContainerStyle={[styles.listaContenedora, { paddingBottom: 100 + insets.bottom }]}>
         {transacciones.map((transaccion) => (
           <FilaTransaccion
             key={transaccion.id}
@@ -44,7 +46,7 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
         ))}
       </ScrollView>
 
-      <View style={styles.accionesInferiores}>
+      <View style={[styles.accionesInferiores, { bottom: 12 + insets.bottom }]}>
         <Button
           mode="contained"
           style={styles.botonAccion}
@@ -94,18 +96,17 @@ const styles = StyleSheet.create({
   montoNegativo: {
     color: '#C4362D'
   },
-  listaContenedora: {
-    paddingBottom: 88
-  },
+  listaContenedora: {},
   accionesInferiores: {
     position: 'absolute',
     left: 16,
     right: 16,
-    bottom: 16,
-    alignItems: 'center',
-    gap: 12
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8
   },
   botonAccion: {
-    minWidth: 220
+    flex: 1,
+    maxWidth: 220
   }
 });
