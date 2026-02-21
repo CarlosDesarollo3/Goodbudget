@@ -45,6 +45,7 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
   const [nodoEliminar, setNodoEliminar] = useState<NodoSeleccionado | null>(null);
   const [creacionPendiente, setCreacionPendiente] = useState<CreacionPendiente | null>(null);
   const [nombreTemporal, setNombreTemporal] = useState('');
+  const [montoInicialTemporal, setMontoInicialTemporal] = useState('0');
   const [mostrarAvisoGesto, setMostrarAvisoGesto] = useState(false);
 
   const abrirDialogoRenombrar = (nodo: NodoSeleccionado): void => {
@@ -89,6 +90,12 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
   const abrirDialogoCreacion = (tipo: TipoCreacion): void => {
     setCreacionPendiente({ tipo });
     setNombreTemporal('');
+    setMontoInicialTemporal('0');
+  };
+
+  const obtenerMontoInicial = (): number => {
+    const monto = Number(montoInicialTemporal.replace(',', '.'));
+    return Number.isFinite(monto) ? monto : 0;
   };
 
   const confirmarCreacion = (): void => {
@@ -100,7 +107,7 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
 
     if (creacionPendiente.tipo === 'cuenta') {
       const nombreDefecto = `Cuenta ${cuentas.length + 1}`;
-      CrearCuenta(nombreCapturado || nombreDefecto, idGrupo);
+      CrearCuenta(nombreCapturado || nombreDefecto, idGrupo, obtenerMontoInicial());
     } else {
       const nombreDefecto = `Subgrupo ${subgrupos.length + 1}`;
       CrearGrupo(nombreCapturado || nombreDefecto, idGrupo);
@@ -108,6 +115,7 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
 
     setCreacionPendiente(null);
     setNombreTemporal('');
+    setMontoInicialTemporal('0');
   };
 
   return (
@@ -158,6 +166,16 @@ export const PantallaDetalleGrupo = ({ route, navigation }: NativeStackScreenPro
           <Dialog.Title>{creacionPendiente?.tipo === 'cuenta' ? 'Nueva cuenta' : 'Nuevo subgrupo'}</Dialog.Title>
           <Dialog.Content>
             <TextInput value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre (opcional)" autoFocus />
+            {creacionPendiente?.tipo === 'cuenta' ? (
+              <TextInput
+                value={montoInicialTemporal}
+                onChangeText={setMontoInicialTemporal}
+                mode="outlined"
+                keyboardType="decimal-pad"
+                label="Monto inicial"
+                style={styles.campoMontoInicial}
+              />
+            ) : null}
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={() => setCreacionPendiente(null)}>Cancelar</Button>
@@ -202,6 +220,9 @@ const styles = StyleSheet.create({
   },
   contenido: {
     gap: 8
+  },
+  campoMontoInicial: {
+    marginTop: 10
   },
   accionesInferiores: {
     position: 'absolute',
