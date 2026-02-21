@@ -11,6 +11,7 @@ import { RepositorioSqlite } from '@/Datos/Repositorios/RepositorioSqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CerrarFilaAbierta, FilaDeslizableAcciones } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
 import { Transaccion } from '@/Dominio/Modelos';
+import { EstadoVacioLista } from '@/Interfaz/Componentes/EstadoVacioLista';
 
 const repositorio = new RepositorioSqlite();
 
@@ -60,24 +61,34 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
           return false;
         }}
       >
-        {transacciones.map((transaccion) => (
-          <FilaDeslizableAcciones
-            key={transaccion.id}
-            id={transaccion.id}
-            onEditar={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
-            onEliminar={() => setTransaccionEliminar(transaccion)}
-            etiquetaEditar="Editar"
-            etiquetaEliminar="Eliminar"
-            onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
-          >
-            <FilaTransaccion
-              transaccion={transaccion}
-              idCuentaContexto={idCuenta}
-              moneda={moneda}
-              onPress={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
-            />
-          </FilaDeslizableAcciones>
-        ))}
+        {transacciones.length === 0 ? (
+          <EstadoVacioLista
+            icono="cash-remove"
+            titulo="Aún no hay movimientos"
+            descripcion="Registra tu primera transacción para empezar a ver actividad y controlar el balance de la cuenta."
+            etiquetaCta="Añadir primera transacción"
+            onPressCta={() => navigation.navigate('PantallaFormularioTransaccion', { idCuentaPredeterminada: idCuenta })}
+          />
+        ) : (
+          transacciones.map((transaccion) => (
+            <FilaDeslizableAcciones
+              key={transaccion.id}
+              id={transaccion.id}
+              onEditar={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
+              onEliminar={() => setTransaccionEliminar(transaccion)}
+              etiquetaEditar="Editar"
+              etiquetaEliminar="Eliminar"
+              onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
+            >
+              <FilaTransaccion
+                transaccion={transaccion}
+                idCuentaContexto={idCuenta}
+                moneda={moneda}
+                onPress={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
+              />
+            </FilaDeslizableAcciones>
+          ))
+        )}
       </ScrollView>
 
       <View style={[styles.accionesInferiores, { bottom: 12 + insets.bottom }]}>
