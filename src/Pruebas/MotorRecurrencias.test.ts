@@ -9,6 +9,9 @@ class RepositorioReglasMemoria implements RepositorioReglas {
   ActualizarRegla(regla: ReglaRecurrente): void {
     this.reglas = this.reglas.map((item) => (item.id === regla.id ? regla : item));
   }
+  EliminarRegla(idRegla: string): void {
+    this.reglas = this.reglas.filter((item) => item.id !== idRegla);
+  }
 }
 
 class RepositorioTransaccionesMemoria implements RepositorioTransacciones {
