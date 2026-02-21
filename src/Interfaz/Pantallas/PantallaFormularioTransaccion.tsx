@@ -2,7 +2,8 @@ import React from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { Button, Chip, HelperText, Modal, Portal, SegmentedButtons, Text, TextInput } from 'react-native-paper';
+import { Button, Chip, HelperText, Modal, Portal, SegmentedButtons, Text } from 'react-native-paper';
+import { InputConCerrarTeclado } from '@/Interfaz/Componentes/InputConCerrarTeclado';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatISO } from 'date-fns';
 import { EsquemaTransaccionFormulario } from '@/Dominio/Esquemas';
@@ -182,7 +183,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
           control={control}
           name="monto"
           render={({ field: { value, onChange } }) => (
-            <TextInput
+            <InputConCerrarTeclado
               mode="flat"
               dense
               underlineColor="transparent"
@@ -222,7 +223,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
         control={control}
         name="nota"
         render={({ field: { value, onChange } }) => (
-          <TextInput
+          <InputConCerrarTeclado
             label="Nota (opcional)"
             mode="outlined"
             placeholder="Descripción breve"
@@ -291,7 +292,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
           <Text variant="titleMedium">
             {selectorAbierto === 'idCuentaOrigen' ? 'Seleccionar cuenta origen' : 'Seleccionar cuenta destino'}
           </Text>
-          <TextInput
+          <InputConCerrarTeclado
             mode="outlined"
             label="Buscar cuenta"
             value={busquedaCuenta}

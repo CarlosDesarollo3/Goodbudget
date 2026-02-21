@@ -16,6 +16,16 @@ export class RepositorioSqlite
 {
   private bd = ObtenerBd();
 
+  private ExisteCategoriaConNombre(nombre: string, idExcluir?: string): boolean {
+    const nombreNormalizado = nombre.trim().toLowerCase();
+    const resultado = this.bd.getFirstSync<{ total: number }>(
+      'SELECT COUNT(*) AS total FROM categorias WHERE LOWER(TRIM(nombre)) = ? AND (? IS NULL OR id != ?)',
+      [nombreNormalizado, idExcluir ?? null, idExcluir ?? null]
+    );
+
+    return (resultado?.total ?? 0) > 0;
+  }
+
   ListarGrupos(): Grupo[] {
     try {
       return this.bd.getAllSync<Grupo>('SELECT * FROM grupos ORDER BY nombre');
@@ -125,12 +135,29 @@ export class RepositorioSqlite
   }
 
   CrearCategoria(categoria: Categoria): void {
+    if (this.ExisteCategoriaConNombre(categoria.nombre)) {
+      throw new ErrorDatos('Ya existe una categoría con ese nombre');
+    }
+
     this.bd.runSync('INSERT INTO categorias (id,nombre,color,icono,creadoEn) VALUES (?,?,?,?,?)', [
       categoria.id,
       categoria.nombre,
       categoria.color,
       categoria.icono,
       categoria.creadoEn
+    ]);
+  }
+
+  ActualizarCategoria(categoria: Pick<Categoria, 'id' | 'nombre' | 'color' | 'icono'>): void {
+    if (this.ExisteCategoriaConNombre(categoria.nombre, categoria.id)) {
+      throw new ErrorDatos('Ya existe una categoría con ese nombre');
+    }
+
+    this.bd.runSync('UPDATE categorias SET nombre = ?, color = ?, icono = ? WHERE id = ?', [
+      categoria.nombre,
+      categoria.color,
+      categoria.icono,
+      categoria.id
     ]);
   }
 

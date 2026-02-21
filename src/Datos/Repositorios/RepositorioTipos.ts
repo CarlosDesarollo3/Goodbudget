@@ -24,6 +24,7 @@ export interface RepositorioTransacciones {
 export interface RepositorioCategorias {
   ListarCategorias(): Categoria[];
   CrearCategoria(categoria: Categoria): void;
+  ActualizarCategoria(categoria: Pick<Categoria, 'id' | 'nombre' | 'color' | 'icono'>): void;
   EliminarCategoria(idCategoria: string): void;
 }
 
