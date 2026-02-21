@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
-import { Button, Card, Switch, Text, TextInput } from 'react-native-paper';
+import { Button, Card, HelperText, Switch, Text, TextInput } from 'react-native-paper';
 import { formatISO } from 'date-fns';
 import { ReglaRecurrente } from '@/Dominio/Modelos';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
