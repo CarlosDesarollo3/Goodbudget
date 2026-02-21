@@ -1,7 +1,7 @@
 import { AvanceObjetivoPresupuesto, Categoria, Cuenta, Grupo, ObjetivoPresupuesto, ReglaRecurrente, Transaccion, TipoTransaccion } from '@/Dominio/Modelos';
 import { ErrorDatos, RegistrarLogDesarrollo } from '@/Utilidades/Errores';
 import { ModoTema } from '@/Interfaz/Tema/temaAplicacion';
-import { ObtenerBd } from '../Bd/ConexionBd';
+import { InicializarBd, ObtenerBd } from '../Bd/ConexionBd';
 import {
   RepositorioCategorias,
   RepositorioConfiguracion,
@@ -37,6 +37,10 @@ export class RepositorioSqlite
   implements RepositorioSobres, RepositorioTransacciones, RepositorioCategorias, RepositorioReglas, RepositorioConfiguracion, RepositorioObjetivosPresupuesto
 {
   private bd = ObtenerBd();
+
+  constructor() {
+    InicializarBd();
+  }
 
   private ExisteCategoriaConNombre(nombre: string, idExcluir?: string): boolean {
     const nombreNormalizado = nombre.trim().toLowerCase();
@@ -457,6 +461,7 @@ export class RepositorioSqlite
       categorias: this.VolcarTabla<Categoria>('categorias'),
       transacciones: this.VolcarTabla<Transaccion>('transacciones'),
       reglasRecurrentes: this.VolcarTabla<Omit<ReglaRecurrente, 'habilitada'> & { habilitada: number }>('reglasRecurrentes'),
+      objetivosPresupuesto: this.VolcarTabla<ObjetivoPresupuesto>('objetivosPresupuesto'),
       configuracion: this.VolcarTabla<{ clave: string; valor: string }>('configuracion')
     };
   }
@@ -490,6 +495,11 @@ export class RepositorioSqlite
           ],
           datos.reglasRecurrentes
         );
+        this.ReinsertarFilasTabla(
+          'objetivosPresupuesto',
+          ['id', 'idCuenta', 'idCategoria', 'montoMensual', 'umbralAlerta', 'rolloverHabilitado', 'activo', 'creadoEn', 'actualizadoEn'],
+          datos.objetivosPresupuesto
+        );
         this.ReinsertarFilasTabla('configuracion', ['clave', 'valor'], datos.configuracion);
       });
     } catch (error) {
@@ -516,7 +526,7 @@ export class RepositorioSqlite
   }
 
   private LimpiarTablasParaImportacion(): void {
-    ['transacciones', 'reglasRecurrentes', 'categorias', 'cuentas', 'grupos', 'configuracion'].forEach((tabla) => {
+    ['transacciones', 'reglasRecurrentes', 'objetivosPresupuesto', 'categorias', 'cuentas', 'grupos', 'configuracion'].forEach((tabla) => {
       this.bd.runSync(`DELETE FROM ${tabla}`);
     });
   }

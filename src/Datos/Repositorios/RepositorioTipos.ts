@@ -6,6 +6,7 @@ export interface RespaldoDatos {
   categorias: Categoria[];
   transacciones: Transaccion[];
   reglasRecurrentes: (Omit<ReglaRecurrente, 'habilitada'> & { habilitada: number })[];
+  objetivosPresupuesto: ObjetivoPresupuesto[];
   configuracion: { clave: string; valor: string }[];
 }
 
