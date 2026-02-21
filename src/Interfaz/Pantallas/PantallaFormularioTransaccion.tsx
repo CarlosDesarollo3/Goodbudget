@@ -32,7 +32,6 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
     () => cuentas.filter((cuenta) => cuenta.nombre.toLowerCase().includes(busquedaCuenta.toLowerCase())),
     [busquedaCuenta, cuentas]
   );
-
   const { control, handleSubmit, setValue, formState: { errors } } = useForm<ValoresFormulario>({
     resolver: zodResolver(EsquemaTransaccionFormulario),
     defaultValues: transaccionEditar
@@ -57,6 +56,17 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
   const cuentaOrigenSeleccionada = useWatch({ control, name: 'idCuentaOrigen' });
   const cuentaDestinoSeleccionada = useWatch({ control, name: 'idCuentaDestino' });
   const montoCapturado = useWatch({ control, name: 'monto' });
+  const cuentasDisponiblesSelector = React.useMemo(() => {
+    if (tipoSeleccionado !== TipoTransaccion.TRANSFERENCIA || !selectorAbierto) {
+      return cuentasFiltradas;
+    }
+
+    if (selectorAbierto === 'idCuentaOrigen') {
+      return cuentasFiltradas.filter((cuenta) => cuenta.id !== cuentaDestinoSeleccionada);
+    }
+
+    return cuentasFiltradas.filter((cuenta) => cuenta.id !== cuentaOrigenSeleccionada);
+  }, [tipoSeleccionado, selectorAbierto, cuentasFiltradas, cuentaDestinoSeleccionada, cuentaOrigenSeleccionada]);
   const cuentaOrigen = React.useMemo(() => cuentas.find((cuenta) => cuenta.id === cuentaOrigenSeleccionada), [cuentas, cuentaOrigenSeleccionada]);
   const cuentaDestino = React.useMemo(() => cuentas.find((cuenta) => cuenta.id === cuentaDestinoSeleccionada), [cuentas, cuentaDestinoSeleccionada]);
 
@@ -163,7 +173,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
       />
       <HelperText type="error" visible={!!errors.monto}>{errors.monto?.message}</HelperText>
 
-      {requiereCuentaOrigen ? (
+      {requiereCuentaOrigen && tipoSeleccionado !== TipoTransaccion.TRANSFERENCIA ? (
         <View style={styles.bloqueCampo}>
           <Text variant="labelLarge">Cuenta origen</Text>
           <Pressable style={styles.tarjetaCuenta} onPress={() => abrirSelectorCuentas('idCuentaOrigen')}>
@@ -175,13 +185,19 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
 
       {tipoSeleccionado === TipoTransaccion.TRANSFERENCIA ? (
         <View style={styles.tarjetaTransferencia}>
-          <Text variant="titleSmall">{cuentaOrigen?.nombre ?? 'Origen'}</Text>
+          <Pressable style={styles.ladoTransferencia} onPress={() => abrirSelectorCuentas('idCuentaOrigen')}>
+            <Text variant="titleSmall">{cuentaOrigen?.nombre ?? 'Origen'}</Text>
+            <Text variant="bodySmall">Toca para cambiar</Text>
+          </Pressable>
           <Text variant="headlineSmall">→</Text>
-          <Text variant="titleSmall">{cuentaDestino?.nombre ?? 'Destino'}</Text>
+          <Pressable style={styles.ladoTransferencia} onPress={() => abrirSelectorCuentas('idCuentaDestino')}>
+            <Text variant="titleSmall">{cuentaDestino?.nombre ?? 'Destino'}</Text>
+            <Text variant="bodySmall">Toca para cambiar</Text>
+          </Pressable>
         </View>
       ) : null}
 
-      {requiereCuentaDestino ? (
+      {requiereCuentaDestino && tipoSeleccionado !== TipoTransaccion.TRANSFERENCIA ? (
         <View style={styles.bloqueCampo}>
           <Text variant="labelLarge">Cuenta destino</Text>
           <Pressable style={styles.tarjetaCuenta} onPress={() => abrirSelectorCuentas('idCuentaDestino')}>
@@ -239,7 +255,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
             style={styles.inputMejorado}
           />
           <ScrollView style={styles.listaCuentasModal}>
-            {cuentasFiltradas.map((cuenta) => (
+            {cuentasDisponiblesSelector.map((cuenta) => (
               <Pressable
                 key={`modal-${cuenta.id}`}
                 style={styles.itemCuentaModal}
@@ -253,7 +269,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
                 <Text variant="bodyLarge">{cuenta.nombre}</Text>
               </Pressable>
             ))}
-            {cuentasFiltradas.length === 0 ? <HelperText type="info">No hay cuentas con ese nombre</HelperText> : null}
+            {cuentasDisponiblesSelector.length === 0 ? <HelperText type="info">No hay cuentas con ese nombre</HelperText> : null}
           </ScrollView>
         </Modal>
       </Portal>
@@ -312,6 +328,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     backgroundColor: '#F4F5F7'
+  },
+  ladoTransferencia: {
+    alignItems: 'center',
+    gap: 2,
+    flexShrink: 1
   },
   grupoChips: {
     flexDirection: 'row',
