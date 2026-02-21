@@ -1,21 +1,25 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Surface, Text } from 'react-native-paper';
+import { Button, Dialog, Portal, Snackbar, Surface, Text } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 import { FilaTransaccion } from '@/Interfaz/Componentes/FilaTransaccion';
+import { FilaDeslizableAcciones } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
 import { RepositorioSqlite } from '@/Datos/Repositorios/RepositorioSqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Transaccion } from '@/Dominio/Modelos';
 
 const repositorio = new RepositorioSqlite();
 
 export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaDetalleCuenta'>): React.JSX.Element => {
   const { idCuenta } = route.params;
-  const { ObtenerBalanceCuenta, moneda, ConvertirCuentaEnGrupo } = UsarAlmacenAplicacion();
+  const { ObtenerBalanceCuenta, moneda, ConvertirCuentaEnGrupo, EliminarTransaccion } = UsarAlmacenAplicacion();
   const insets = useSafeAreaInsets();
   const [transacciones, setTransacciones] = React.useState(() => repositorio.ListarTransaccionesPorCuenta(idCuenta));
+  const [transaccionEliminar, setTransaccionEliminar] = React.useState<Transaccion | null>(null);
+  const [avisoGesto, setAvisoGesto] = React.useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -24,6 +28,16 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
   );
 
   const balanceCuenta = ObtenerBalanceCuenta(idCuenta);
+
+  const confirmarEliminacion = (): void => {
+    if (!transaccionEliminar) {
+      return;
+    }
+
+    EliminarTransaccion(transaccionEliminar.id);
+    setTransacciones(repositorio.ListarTransaccionesPorCuenta(idCuenta));
+    setTransaccionEliminar(null);
+  };
 
   return (
     <View style={styles.contenedor}>
@@ -36,13 +50,20 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
 
       <ScrollView contentContainerStyle={[styles.listaContenedora, { paddingBottom: 100 + insets.bottom }]}>
         {transacciones.map((transaccion) => (
-          <FilaTransaccion
+          <FilaDeslizableAcciones
             key={transaccion.id}
-            transaccion={transaccion}
-            idCuentaContexto={idCuenta}
-            moneda={moneda}
-            onPress={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
-          />
+            id={`transaccion-${transaccion.id}`}
+            onEditar={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
+            onEliminar={() => setTransaccionEliminar(transaccion)}
+            onDeslizamientoInsuficiente={() => setAvisoGesto(true)}
+          >
+            <FilaTransaccion
+              transaccion={transaccion}
+              idCuentaContexto={idCuenta}
+              moneda={moneda}
+              onPress={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
+            />
+          </FilaDeslizableAcciones>
         ))}
       </ScrollView>
 
@@ -68,6 +89,23 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
           Convertir en grupo
         </Button>
       </View>
+
+      <Portal>
+        <Dialog visible={Boolean(transaccionEliminar)} onDismiss={() => setTransaccionEliminar(null)}>
+          <Dialog.Title>Eliminar transacción</Dialog.Title>
+          <Dialog.Content>
+            <Text>¿Seguro que deseas eliminar esta transacción de la cuenta?</Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setTransaccionEliminar(null)}>Cancelar</Button>
+            <Button onPress={confirmarEliminacion}>Eliminar</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      <Snackbar visible={avisoGesto} onDismiss={() => setAvisoGesto(false)} duration={1800}>
+        Desliza más para editar o eliminar.
+      </Snackbar>
     </View>
   );
 };
@@ -96,7 +134,9 @@ const styles = StyleSheet.create({
   montoNegativo: {
     color: '#C4362D'
   },
-  listaContenedora: {},
+  listaContenedora: {
+    gap: 8
+  },
   accionesInferiores: {
     position: 'absolute',
     left: 16,
