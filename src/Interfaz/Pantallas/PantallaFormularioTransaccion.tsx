@@ -122,8 +122,8 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
   };
 
   const requiereCategoria = tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.INGRESO;
-  const requiereCuentaOrigen = tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.INGRESO || tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
-  const requiereCuentaDestino = tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
+  const requiereCuentaOrigen = tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
+  const requiereCuentaDestino = tipoSeleccionado === TipoTransaccion.INGRESO || tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
   const colorMonto = tipoSeleccionado === TipoTransaccion.GASTO
     ? styles.montoNegativo
     : tipoSeleccionado === TipoTransaccion.INGRESO
