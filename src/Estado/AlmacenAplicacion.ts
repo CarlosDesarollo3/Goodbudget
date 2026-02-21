@@ -30,8 +30,12 @@ interface EstadoAplicacion {
   RegistrarTransaccion(datos: Omit<Transaccion, 'id' | 'creadoEn'>): void;
   ActualizarTransaccion(transaccion: Transaccion): void;
   EliminarTransaccion(idTransaccion: string): void;
-  CrearCategoria(nombre: string, color?: string): void;
+  CrearCategoria(nombre: string, color?: string, icono?: string): void;
+  ActualizarCategoria(idCategoria: string, nombre: string, color?: string, icono?: string): void;
+  EliminarCategoria(idCategoria: string): void;
   CrearReglaRecurrente(regla: Omit<ReglaRecurrente, 'id' | 'frecuencia' | 'creadoEn'>): void;
+  ActualizarReglaRecurrente(regla: ReglaRecurrente): void;
+  EliminarReglaRecurrente(idRegla: string): void;
   EjecutarReglasPendientes(): number;
   GuardarMoneda(moneda: string): void;
   GuardarModoTema(modoTema: ModoTema): void;
@@ -182,8 +186,18 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     get().InicializarDatos();
   },
 
-  CrearCategoria: (nombre, color) => {
-    repositorio.CrearCategoria({ id: GenerarUuid(), nombre, color, creadoEn: formatISO(new Date()) });
+  CrearCategoria: (nombre, color, icono) => {
+    repositorio.CrearCategoria({ id: GenerarUuid(), nombre, color, icono, creadoEn: formatISO(new Date()) });
+    get().InicializarDatos();
+  },
+
+  ActualizarCategoria: (idCategoria, nombre, color, icono) => {
+    repositorio.ActualizarCategoria({ id: idCategoria, nombre, color, icono });
+    get().InicializarDatos();
+  },
+
+  EliminarCategoria: (idCategoria) => {
+    repositorio.EliminarCategoria(idCategoria);
     get().InicializarDatos();
   },
 
@@ -195,6 +209,16 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
       creadoEn: formatISO(new Date())
     };
     repositorio.GuardarRegla(nuevaRegla);
+    get().InicializarDatos();
+  },
+
+  ActualizarReglaRecurrente: (regla) => {
+    repositorio.ActualizarRegla(regla);
+    get().InicializarDatos();
+  },
+
+  EliminarReglaRecurrente: (idRegla) => {
+    repositorio.EliminarRegla(idRegla);
     get().InicializarDatos();
   },
 

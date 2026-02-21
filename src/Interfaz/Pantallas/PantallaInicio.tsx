@@ -1,6 +1,7 @@
 import React from 'react';
 import { GestureResponderEvent, LayoutChangeEvent, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Dialog, Portal, Snackbar, Surface, Text, TextInput } from 'react-native-paper';
+import { Button, Dialog, Portal, Snackbar, Surface, Text } from 'react-native-paper';
+import { InputConCerrarTeclado } from '@/Interfaz/Componentes/InputConCerrarTeclado';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
 import { TarjetaGrupo } from '@/Interfaz/Componentes/TarjetaGrupo';
@@ -429,9 +430,9 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
         <Dialog visible={Boolean(creacionPendiente)} onDismiss={() => setCreacionPendiente(null)}>
           <Dialog.Title>{creacionPendiente?.tipo === 'cuenta' ? 'Nueva cuenta' : 'Nuevo grupo'}</Dialog.Title>
           <Dialog.Content>
-            <TextInput value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre (opcional)" autoFocus />
+            <InputConCerrarTeclado value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre (opcional)" autoFocus />
             {creacionPendiente?.tipo === 'cuenta' ? (
-              <TextInput
+              <InputConCerrarTeclado
                 value={montoInicialTemporal}
                 onChangeText={setMontoInicialTemporal}
                 mode="outlined"
@@ -450,7 +451,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
         <Dialog visible={Boolean(nodoRenombrar)} onDismiss={() => setNodoRenombrar(null)}>
           <Dialog.Title>Renombrar {nodoRenombrar?.tipo}</Dialog.Title>
           <Dialog.Content>
-            <TextInput value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre" autoFocus />
+            <InputConCerrarTeclado value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre" autoFocus />
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={() => setNodoRenombrar(null)}>Cancelar</Button>

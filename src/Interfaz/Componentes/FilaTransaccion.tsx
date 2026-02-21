@@ -11,6 +11,7 @@ interface PropsFilaTransaccion {
   idCuentaContexto: string;
   moneda: string;
   onPress?: () => void;
+  onDuplicar?: () => void;
 }
 
 export const FilaTransaccion = ({ transaccion, idCuentaContexto, moneda, onPress }: PropsFilaTransaccion): React.JSX.Element => {
@@ -29,9 +30,12 @@ export const FilaTransaccion = ({ transaccion, idCuentaContexto, moneda, onPress
       description={`${format(new Date(transaccion.fecha), 'dd MMM yyyy', { locale: es })}${transaccion.nota ? ` · ${transaccion.nota}` : ''}`}
       left={(props) => <List.Icon {...props} icon={iconoTransaccion} color={colorIcono} />}
       right={() => (
-        <Text variant="titleSmall" style={{ color: colorMonto }}>
-          {FormatearMoneda(transaccion.monto, moneda)}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {onDuplicar ? <IconButton icon="content-copy" size={18} onPress={onDuplicar} /> : null}
+          <Text variant="titleSmall" style={{ color: colorMonto }}>
+            {FormatearMoneda(transaccion.monto, moneda)}
+          </Text>
+        </View>
       )}
       onPress={onPress}
     />
