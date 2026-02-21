@@ -3,9 +3,10 @@ import { ScrollView } from 'react-native';
 import { Button, Card, Switch, Text, TextInput } from 'react-native-paper';
 import { formatISO } from 'date-fns';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
+import { FormatearMoneda } from '@/Utilidades/Formatos';
 
 export const PantallaReglasRecurrentes = (): React.JSX.Element => {
-  const { reglas, CrearReglaRecurrente } = UsarAlmacenAplicacion();
+  const { reglas, moneda, CrearReglaRecurrente } = UsarAlmacenAplicacion();
   const [idCuentaOrigen, setIdCuentaOrigen] = useState('');
   const [idCuentaDestino, setIdCuentaDestino] = useState('');
   const [diaDelMes, setDiaDelMes] = useState('1');
@@ -38,7 +39,7 @@ export const PantallaReglasRecurrentes = (): React.JSX.Element => {
           <Card.Title title={`Regla mensual día ${regla.diaDelMes}`} />
           <Card.Content>
             <Text>{`${regla.idCuentaOrigen} → ${regla.idCuentaDestino}`}</Text>
-            <Text>Monto: {regla.monto}</Text>
+            <Text>Monto: {FormatearMoneda(regla.monto, moneda)}</Text>
             <Text>Próxima ejecución: {regla.proximaEjecucionEn.slice(0, 10)}</Text>
             <Switch value={regla.habilitada} />
           </Card.Content>
