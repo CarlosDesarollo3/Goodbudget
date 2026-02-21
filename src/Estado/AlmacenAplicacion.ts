@@ -15,6 +15,8 @@ interface EstadoAplicacion {
   reglas: ReglaRecurrente[];
   transaccionesPorCuenta: Record<string, Transaccion[]>;
   moneda: string;
+  onboardingGestosCompletado: boolean;
+  solicitudAyudaRapida: number;
   errorUi?: string;
   modoTema: ModoTema;
   InicializarDatos(): void;
@@ -38,7 +40,8 @@ interface EstadoAplicacion {
   EliminarReglaRecurrente(idRegla: string): void;
   EjecutarReglasPendientes(): number;
   GuardarMoneda(moneda: string): void;
-  GuardarModoTema(modoTema: ModoTema): void;
+  MarcarOnboardingGestosCompletado(completado: boolean): void;
+  SolicitarAyudaRapida(): void;
   ObtenerBalanceCuenta(idCuenta: string): number;
 }
 
@@ -54,7 +57,8 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
   reglas: [],
   transaccionesPorCuenta: {},
   moneda: 'MXN',
-  modoTema: 'sistema',
+  onboardingGestosCompletado: false,
+  solicitudAyudaRapida: 0,
 
   InicializarDatos: () => {
     InicializarBd();
@@ -68,9 +72,9 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     const categorias = repositorio.ListarCategorias();
     const reglas = repositorio.ListarReglas();
     const moneda = repositorio.ObtenerMoneda();
-    const modoTema = repositorio.ObtenerModoTema();
+    const onboardingGestosCompletado = repositorio.ObtenerValorConfiguracion('onboardingGestosCompletado') === '1';
 
-    set({ grupos, cuentasPorGrupo, categorias, reglas, moneda, modoTema });
+    set({ grupos, cuentasPorGrupo, categorias, reglas, moneda, onboardingGestosCompletado });
   },
 
   CrearGrupo: (nombre, idGrupoPadre) => {
@@ -233,9 +237,17 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     set({ moneda });
   },
 
-  GuardarModoTema: (modoTema) => {
-    repositorio.GuardarModoTema(modoTema);
-    set({ modoTema });
+  MarcarOnboardingGestosCompletado: (completado) => {
+    repositorio.GuardarValorConfiguracion('onboardingGestosCompletado', completado ? '1' : '0');
+    set({ onboardingGestosCompletado: completado });
+  },
+
+  SolicitarAyudaRapida: () => {
+    repositorio.GuardarValorConfiguracion('onboardingGestosCompletado', '0');
+    set((estado) => ({
+      onboardingGestosCompletado: false,
+      solicitudAyudaRapida: estado.solicitudAyudaRapida + 1
+    }));
   },
 
   ObtenerBalanceCuenta: (idCuenta) => {
