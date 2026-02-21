@@ -1,5 +1,6 @@
 import { Categoria, Cuenta, Grupo, ReglaRecurrente, Transaccion } from '@/Dominio/Modelos';
 import { ErrorDatos, RegistrarLogDesarrollo } from '@/Utilidades/Errores';
+import { ModoTema } from '@/Interfaz/Tema/temaAplicacion';
 import { ObtenerBd } from '../Bd/ConexionBd';
 import {
   RepositorioCategorias,
@@ -255,5 +256,18 @@ export class RepositorioSqlite
 
   GuardarMoneda(moneda: string): void {
     this.bd.runSync('INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?,?)', ['moneda', moneda]);
+  }
+
+  ObtenerModoTema(): ModoTema {
+    const fila = this.bd.getFirstSync<{ valor: string }>('SELECT valor FROM configuracion WHERE clave = ?', ['modoTema']);
+    if (fila?.valor === 'claro' || fila?.valor === 'oscuro' || fila?.valor === 'sistema') {
+      return fila.valor;
+    }
+
+    return 'sistema';
+  }
+
+  GuardarModoTema(modoTema: ModoTema): void {
+    this.bd.runSync('INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?,?)', ['modoTema', modoTema]);
   }
 }

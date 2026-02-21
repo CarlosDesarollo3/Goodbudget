@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme as TemaNavegacionOscuro, DefaultTheme as TemaNavegacionClaro, Theme as TemaNavegacion } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ParametrosNavegacion } from './TiposNavegacion';
 import { PantallaInicio } from '@/Interfaz/Pantallas/PantallaInicio';
@@ -10,16 +10,37 @@ import { PantallaCategorias } from '@/Interfaz/Pantallas/PantallaCategorias';
 import { PantallaReglasRecurrentes } from '@/Interfaz/Pantallas/PantallaReglasRecurrentes';
 import { PantallaConfiguracion } from '@/Interfaz/Pantallas/PantallaConfiguracion';
 import { MenuCabecera } from '@/Interfaz/Componentes/MenuCabecera';
+import { TemaAplicacion } from '@/Interfaz/Tema/temaAplicacion';
 
 const Pila = createNativeStackNavigator<ParametrosNavegacion>();
 
-export const PilaNavegacionPrincipal = (): React.JSX.Element => {
+interface PropsPilaNavegacionPrincipal {
+  tema: TemaAplicacion;
+}
+
+const CrearTemaNavegacion = (tema: TemaAplicacion): TemaNavegacion => ({
+  ...(tema.dark ? TemaNavegacionOscuro : TemaNavegacionClaro),
+  dark: tema.dark,
+  colors: {
+    ...(tema.dark ? TemaNavegacionOscuro.colors : TemaNavegacionClaro.colors),
+    primary: tema.colors.primary,
+    background: tema.colors.background,
+    card: tema.colors.surface,
+    text: tema.colors.onSurface,
+    border: tema.colors.outline,
+    notification: tema.colors.error
+  }
+});
+
+export const PilaNavegacionPrincipal = ({ tema }: PropsPilaNavegacionPrincipal): React.JSX.Element => {
+  const temaNavegacion = CrearTemaNavegacion(tema);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={temaNavegacion}>
       <Pila.Navigator
         screenOptions={({ navigation }) => ({
-          headerStyle: { backgroundColor: '#ffffff' },
-          headerTintColor: '#000000',
+          headerStyle: { backgroundColor: tema.colors.surface },
+          headerTintColor: tema.colors.onSurface,
           headerTitleStyle: { fontWeight: '700' },
           headerRight: () => <MenuCabecera navigation={navigation} />
         })}

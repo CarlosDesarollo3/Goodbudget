@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Animated, PanResponder, Pressable, StyleSheet, View } from 'react-native';
-import { Text } from 'react-native-paper';
+import { Text, useTheme } from 'react-native-paper';
+import { TemaAplicacion } from '@/Interfaz/Tema/temaAplicacion';
 
 const DESPLAZAMIENTO_MAXIMO = 96;
 const UMBRAL_APERTURA = 48;
@@ -44,6 +45,7 @@ export const FilaDeslizableAcciones = ({
   etiquetaEliminar = 'Eliminar',
   onDeslizamientoInsuficiente
 }: PropsFilaDeslizableAcciones): React.JSX.Element => {
+  const tema = useTheme<TemaAplicacion>();
   const traslacionX = useRef(new Animated.Value(0)).current;
   const offsetRef = useRef(0);
   const [ladoAbierto, setLadoAbierto] = useState<'izquierda' | 'derecha' | null>(null);
@@ -188,8 +190,8 @@ export const FilaDeslizableAcciones = ({
           style={[styles.botonAccion, styles.botonIzquierdo]}
           hitSlop={8}
         >
-          <Animated.View style={[styles.accion, styles.accionEditar, { opacity: opacidadEditar }]}> 
-            <Text style={styles.textoAccion}>{etiquetaEditar}</Text>
+          <Animated.View style={[styles.accion, { backgroundColor: tema.colors.primary }, { opacity: opacidadEditar }]}>
+            <Text style={[styles.textoAccion, { color: tema.colors.onPrimary }]}>{etiquetaEditar}</Text>
           </Animated.View>
         </Pressable>
 
@@ -203,8 +205,8 @@ export const FilaDeslizableAcciones = ({
           style={[styles.botonAccion, styles.botonDerecho]}
           hitSlop={8}
         >
-          <Animated.View style={[styles.accion, styles.accionEliminar, { opacity: opacidadEliminar }]}> 
-            <Text style={styles.textoAccion}>{etiquetaEliminar}</Text>
+          <Animated.View style={[styles.accion, { backgroundColor: tema.colors.error }, { opacity: opacidadEliminar }]}>
+            <Text style={[styles.textoAccion, { color: tema.colors.onError }]}>{etiquetaEliminar}</Text>
           </Animated.View>
         </Pressable>
       </View>
@@ -251,14 +253,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center'
   },
-  accionEditar: {
-    backgroundColor: '#1E73D8'
-  },
-  accionEliminar: {
-    backgroundColor: '#C62828'
-  },
   textoAccion: {
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 12,
     textTransform: 'uppercase'

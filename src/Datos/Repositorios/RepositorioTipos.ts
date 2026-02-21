@@ -36,4 +36,6 @@ export interface RepositorioReglas {
 export interface RepositorioConfiguracion {
   ObtenerMoneda(): string;
   GuardarMoneda(moneda: string): void;
+  ObtenerModoTema(): 'sistema' | 'claro' | 'oscuro';
+  GuardarModoTema(modoTema: 'sistema' | 'claro' | 'oscuro'): void;
 }

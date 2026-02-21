@@ -1,27 +1,19 @@
 import 'react-native-get-random-values';
 import React from 'react';
-import { PaperProvider, MD3LightTheme } from 'react-native-paper';
+import { useColorScheme } from 'react-native';
+import { PaperProvider } from 'react-native-paper';
 import { PilaNavegacionPrincipal } from '@/Navegacion/PilaNavegacionPrincipal';
-
-const tema = {
-  ...MD3LightTheme,
-  colors: {
-    ...MD3LightTheme.colors,
-    primary: '#1D6FD8',
-    onPrimary: '#FFFFFF',
-    primaryContainer: '#D9E9FF',
-    onPrimaryContainer: '#0D2B52',
-    secondary: '#3B7FBD',
-    secondaryContainer: '#DDEFFF',
-    tertiary: '#2F6EA9',
-    surfaceVariant: '#ECF3FB'
-  }
-};
+import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
+import { ResolverTema } from '@/Interfaz/Tema/temaAplicacion';
 
 const App = (): React.JSX.Element => {
+  const esquemaSistema = useColorScheme();
+  const modoTema = UsarAlmacenAplicacion((estado) => estado.modoTema);
+  const tema = ResolverTema(modoTema, esquemaSistema);
+
   return (
     <PaperProvider theme={tema}>
-      <PilaNavegacionPrincipal />
+      <PilaNavegacionPrincipal tema={tema} />
     </PaperProvider>
   );
 };
