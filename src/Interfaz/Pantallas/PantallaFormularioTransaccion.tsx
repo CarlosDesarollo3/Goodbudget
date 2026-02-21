@@ -28,6 +28,8 @@ type ValoresFormulario = {
 
 export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaFormularioTransaccion'>): React.JSX.Element => {
   const idCuentaPredeterminada = route.params?.idCuentaPredeterminada;
+  const idCategoriaPredeterminada = route.params?.idCategoriaPredeterminada;
+  const tipoPredeterminado = route.params?.tipoPredeterminado;
   const transaccionRoute = (route.params as { transaccion?: Transaccion; duplicar?: boolean } | undefined)?.transaccion;
   const esDuplicado = Boolean((route.params as { duplicar?: boolean } | undefined)?.duplicar);
   const transaccionEditar = esDuplicado ? undefined : transaccionRoute;
@@ -63,15 +65,15 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
           monto: transaccionRoute.monto,
           idCuentaOrigen: transaccionRoute.idCuentaOrigen ?? idCuentaPredeterminada ?? ultimaCuentaUsada,
           idCuentaDestino: transaccionRoute.idCuentaDestino,
-          idCategoria: transaccionRoute.idCategoria ?? ultimaCategoriaUsada,
+          idCategoria: transaccionRoute.idCategoria ?? idCategoriaPredeterminada ?? ultimaCategoriaUsada,
           nota: transaccionRoute.nota,
           fecha: formatISO(new Date())
         }
       : {
-          tipo: TipoTransaccion.GASTO,
+          tipo: tipoPredeterminado ?? TipoTransaccion.GASTO,
           monto: undefined,
           idCuentaOrigen: idCuentaPredeterminada ?? ultimaCuentaUsada,
-          idCategoria: ultimaCategoriaUsada,
+          idCategoria: idCategoriaPredeterminada ?? ultimaCategoriaUsada,
           fecha: formatISO(new Date())
         };
 
@@ -119,6 +121,9 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
       if (!cuentaOrigenSeleccionada) {
         setValue('idCuentaOrigen', idCuentaPredeterminada ?? ultimaCuentaUsada ?? cuentas[0]?.id, { shouldValidate: true });
       }
+      if (!categoriaSeleccionada) {
+        setValue('idCategoria', idCategoriaPredeterminada ?? ultimaCategoriaUsada, { shouldValidate: false });
+      }
       setValue('idCuentaDestino', undefined, { shouldValidate: false });
       return;
     }
@@ -142,7 +147,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
 
       setValue('idCategoria', undefined, { shouldValidate: false });
     }
-  }, [tipoSeleccionado, cuentaOrigenSeleccionada, cuentaDestinoSeleccionada, montoCapturado, transaccionEditar, setValue, cuentas, idCuentaPredeterminada, ultimaCuentaUsada]);
+  }, [tipoSeleccionado, cuentaOrigenSeleccionada, cuentaDestinoSeleccionada, montoCapturado, transaccionEditar, setValue, cuentas, idCuentaPredeterminada, idCategoriaPredeterminada, ultimaCuentaUsada, ultimaCategoriaUsada, categoriaSeleccionada]);
 
   React.useEffect(() => {
     if (!cuentaOrigenSeleccionada || tipoSeleccionado === TipoTransaccion.TRANSFERENCIA) {
@@ -187,7 +192,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
       monto: undefined,
       idCuentaOrigen: cuentaOrigenSeleccionada ?? idCuentaPredeterminada ?? ultimaCuentaUsada,
       idCuentaDestino: undefined,
-      idCategoria: categoriaSeleccionada ?? ultimaCategoriaUsada,
+      idCategoria: categoriaSeleccionada ?? idCategoriaPredeterminada ?? ultimaCategoriaUsada,
       nota: undefined,
       fecha: formatISO(new Date())
     });
