@@ -50,6 +50,8 @@ export interface RepositorioReglas {
 export interface RepositorioConfiguracion {
   ObtenerMoneda(): string;
   GuardarMoneda(moneda: string): void;
+  ObtenerValorConfiguracion(clave: string): string | null;
+  GuardarValorConfiguracion(clave: string, valor?: string): void;
   ObtenerModoTema(): 'sistema' | 'claro' | 'oscuro';
   GuardarModoTema(modoTema: 'sistema' | 'claro' | 'oscuro'): void;
 }

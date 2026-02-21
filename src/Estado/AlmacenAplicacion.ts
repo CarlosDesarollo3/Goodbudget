@@ -51,6 +51,8 @@ interface EstadoAplicacion {
   EliminarReglaRecurrente(idRegla: string): void;
   EjecutarReglasPendientes(): number;
   GuardarMoneda(moneda: string): void;
+  ObtenerValorConfiguracion(clave: string): string | null;
+  GuardarValorConfiguracion(clave: string, valor?: string): void;
   GuardarModoTema(modoTema: ModoTema): void;
   CrearObjetivoPresupuesto(datos: Omit<ObjetivoPresupuesto, 'id' | 'creadoEn' | 'actualizadoEn'>): void;
   ActualizarObjetivoPresupuesto(objetivo: ObjetivoPresupuesto): void;
@@ -250,6 +252,12 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
   GuardarMoneda: (moneda) => {
     repositorio.GuardarMoneda(moneda);
     set({ moneda });
+  },
+
+  ObtenerValorConfiguracion: (clave) => repositorio.ObtenerValorConfiguracion(clave),
+
+  GuardarValorConfiguracion: (clave, valor) => {
+    repositorio.GuardarValorConfiguracion(clave, valor);
   },
 
   GuardarModoTema: (modoTema) => {

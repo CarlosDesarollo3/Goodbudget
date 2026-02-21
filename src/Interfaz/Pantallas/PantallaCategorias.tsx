@@ -4,6 +4,8 @@ import { Button, TextInput } from 'react-native-paper';
 import { ChipCategoria } from '@/Interfaz/Componentes/ChipCategoria';
 import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 import { EstadoVacioLista } from '@/Interfaz/Componentes/EstadoVacioLista';
+import { Categoria } from '@/Dominio/Modelos';
+import { EsquemaCategoria } from '@/Dominio/Esquemas';
 
 type ModoFormulario = 'crear' | 'editar';
 
@@ -30,6 +32,7 @@ export const PantallaCategorias = (): React.JSX.Element => {
   const [errores, setErrores] = useState<Partial<Record<keyof FormularioCategoria, string>>>({});
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<FormularioCategoria>(ObtenerFormularioVacio());
+  const [nombreCategoria, setNombreCategoria] = useState('');
 
   const nombreNormalizado = useMemo(() => formulario.nombre.trim().toLowerCase(), [formulario.nombre]);
 
