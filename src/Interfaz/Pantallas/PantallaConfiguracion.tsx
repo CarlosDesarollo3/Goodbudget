@@ -92,7 +92,7 @@ export const PantallaConfiguracion = (): React.JSX.Element => {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
-      <TextInput label="Moneda (ISO)" value={monedaLocal} onChangeText={setMonedaLocal} />
+      <InputConCerrarTeclado label="Moneda (ISO)" value={monedaLocal} onChangeText={setMonedaLocal} />
       <Button mode="contained" onPress={() => GuardarMoneda(monedaLocal)}>Guardar moneda</Button>
       <Button mode="outlined" onPress={() => void ExportarJson()} loading={procesandoArchivo} disabled={procesandoArchivo}>
         Exportar JSON
