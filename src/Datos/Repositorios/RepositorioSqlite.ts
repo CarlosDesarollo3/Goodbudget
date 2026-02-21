@@ -11,6 +11,15 @@ import {
 
 const MapearBooleano = (valor: number): boolean => valor === 1;
 
+export interface RespaldoDatos {
+  grupos: Grupo[];
+  cuentas: Cuenta[];
+  categorias: Categoria[];
+  transacciones: Transaccion[];
+  reglasRecurrentes: Array<Omit<ReglaRecurrente, 'habilitada'> & { habilitada: number }>;
+  configuracion: Array<{ clave: string; valor: string }>;
+}
+
 export class RepositorioSqlite
   implements RepositorioSobres, RepositorioTransacciones, RepositorioCategorias, RepositorioReglas, RepositorioConfiguracion
 {
@@ -255,5 +264,76 @@ export class RepositorioSqlite
 
   GuardarMoneda(moneda: string): void {
     this.bd.runSync('INSERT OR REPLACE INTO configuracion (clave, valor) VALUES (?,?)', ['moneda', moneda]);
+  }
+
+  ExportarDatos(): RespaldoDatos {
+    return {
+      grupos: this.VolcarTabla<Grupo>('grupos'),
+      cuentas: this.VolcarTabla<Cuenta>('cuentas'),
+      categorias: this.VolcarTabla<Categoria>('categorias'),
+      transacciones: this.VolcarTabla<Transaccion>('transacciones'),
+      reglasRecurrentes: this.VolcarTabla<Omit<ReglaRecurrente, 'habilitada'> & { habilitada: number }>('reglasRecurrentes'),
+      configuracion: this.VolcarTabla<{ clave: string; valor: string }>('configuracion')
+    };
+  }
+
+  ImportarDatos(datos: RespaldoDatos): void {
+    try {
+      this.bd.withTransactionSync(() => {
+        this.LimpiarTablasParaImportacion();
+        this.ReinsertarFilasTabla('grupos', ['id', 'nombre', 'idGrupoPadre', 'creadoEn'], datos.grupos);
+        this.ReinsertarFilasTabla('cuentas', ['id', 'nombre', 'idGrupoPadre', 'creadoEn'], datos.cuentas);
+        this.ReinsertarFilasTabla('categorias', ['id', 'nombre', 'color', 'icono', 'creadoEn'], datos.categorias);
+        this.ReinsertarFilasTabla(
+          'transacciones',
+          ['id', 'tipo', 'monto', 'idCuentaOrigen', 'idCuentaDestino', 'idCategoria', 'nota', 'fecha', 'creadoEn', 'referenciaIdempotencia'],
+          datos.transacciones
+        );
+        this.ReinsertarFilasTabla(
+          'reglasRecurrentes',
+          [
+            'id',
+            'habilitada',
+            'frecuencia',
+            'diaDelMes',
+            'idCuentaOrigen',
+            'idCuentaDestino',
+            'monto',
+            'etiqueta',
+            'ultimaEjecucionEn',
+            'proximaEjecucionEn',
+            'creadoEn'
+          ],
+          datos.reglasRecurrentes
+        );
+        this.ReinsertarFilasTabla('configuracion', ['clave', 'valor'], datos.configuracion);
+      });
+    } catch (error) {
+      throw new ErrorDatos('No se pudieron importar los datos de respaldo', error);
+    }
+  }
+
+  private VolcarTabla<T>(nombreTabla: string): T[] {
+    return this.bd.getAllSync<T>(`SELECT * FROM ${nombreTabla}`);
+  }
+
+  private ReinsertarFilasTabla<T extends object>(nombreTabla: string, columnas: string[], filas: T[]): void {
+    if (filas.length === 0) {
+      return;
+    }
+
+    const marcadores = columnas.map(() => '?').join(',');
+    const sentencia = `INSERT INTO ${nombreTabla} (${columnas.join(',')}) VALUES (${marcadores})`;
+
+    filas.forEach((fila) => {
+      const valores = columnas.map((columna) => (fila as Record<string, unknown>)[columna] ?? null);
+      this.bd.runSync(sentencia, valores);
+    });
+  }
+
+  private LimpiarTablasParaImportacion(): void {
+    ['transacciones', 'reglasRecurrentes', 'categorias', 'cuentas', 'grupos', 'configuracion'].forEach((tabla) => {
+      this.bd.runSync(`DELETE FROM ${tabla}`);
+    });
   }
 }
