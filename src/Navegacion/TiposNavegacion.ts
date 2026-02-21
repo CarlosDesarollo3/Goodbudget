@@ -1,5 +1,5 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
-import { Transaccion } from '@/Dominio/Modelos';
+import { TipoTransaccion, Transaccion } from '@/Dominio/Modelos';
 
 export type ParametrosPestanasPrincipal = {
   PantallaInicio: undefined;
@@ -13,7 +13,7 @@ export type ParametrosNavegacion = {
   PantallaDetalleGrupo: { idGrupo: string; nombreGrupo: string };
   PantallaDetalleCuenta: { idCuenta: string; nombreCuenta: string };
   PantallaFormularioTransaccion:
-    | { idCuentaPredeterminada?: string }
+    | { idCuentaPredeterminada?: string; idCategoriaPredeterminada?: string; tipoPredeterminado?: TipoTransaccion }
     | { transaccion?: Transaccion; duplicar?: boolean }
     | undefined;
   PantallaCategorias: undefined;
