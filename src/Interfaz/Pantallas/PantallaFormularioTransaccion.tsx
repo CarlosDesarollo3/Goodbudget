@@ -69,6 +69,17 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
   }, [tipoSeleccionado, selectorAbierto, cuentasFiltradas, cuentaDestinoSeleccionada, cuentaOrigenSeleccionada]);
   const cuentaOrigen = React.useMemo(() => cuentas.find((cuenta) => cuenta.id === cuentaOrigenSeleccionada), [cuentas, cuentaOrigenSeleccionada]);
   const cuentaDestino = React.useMemo(() => cuentas.find((cuenta) => cuenta.id === cuentaDestinoSeleccionada), [cuentas, cuentaDestinoSeleccionada]);
+  const cuentasDisponiblesOrigenTransferencia = React.useMemo(
+    () => cuentas.filter((cuenta) => cuenta.id !== cuentaDestinoSeleccionada),
+    [cuentas, cuentaDestinoSeleccionada]
+  );
+  const cuentasDisponiblesDestinoTransferencia = React.useMemo(
+    () => cuentas.filter((cuenta) => cuenta.id !== cuentaOrigenSeleccionada),
+    [cuentas, cuentaOrigenSeleccionada]
+  );
+  const transferenciaSinCuentasSuficientes = tipoSeleccionado === TipoTransaccion.TRANSFERENCIA
+    && cuentasDisponiblesOrigenTransferencia.length === 0
+    && cuentasDisponiblesDestinoTransferencia.length === 0;
 
   React.useEffect(() => {
     if (!tipoSeleccionado) {
@@ -251,12 +262,20 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
         )}
       />
 
-      <Button mode="contained" onPress={handleSubmit(AlEnviar)}>Guardar</Button>
+      {tipoSeleccionado === TipoTransaccion.TRANSFERENCIA ? (
+        <HelperText type="info" visible={transferenciaSinCuentasSuficientes}>
+          Necesitas al menos dos cuentas distintas para registrar una transferencia.
+        </HelperText>
+      ) : null}
+
+      <Button mode="contained" onPress={handleSubmit(AlEnviar)} disabled={transferenciaSinCuentasSuficientes}>Guardar</Button>
       <HelperText type="error" visible={!!errors.root}>{errors.root?.message}</HelperText>
 
       <Portal>
         <Modal visible={selectorAbierto !== null} onDismiss={() => setSelectorAbierto(null)} contentContainerStyle={styles.modalCuentas}>
-          <Text variant="titleMedium">Seleccionar cuenta</Text>
+          <Text variant="titleMedium">
+            {selectorAbierto === 'idCuentaOrigen' ? 'Seleccionar cuenta origen' : 'Seleccionar cuenta destino'}
+          </Text>
           <TextInput
             mode="outlined"
             label="Buscar cuenta"
@@ -279,7 +298,13 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
                 <Text variant="bodyLarge">{cuenta.nombre}</Text>
               </Pressable>
             ))}
-            {cuentasDisponiblesSelector.length === 0 ? <HelperText type="info">No hay cuentas con ese nombre</HelperText> : null}
+            {cuentasDisponiblesSelector.length === 0 ? (
+              <HelperText type="info">
+                {tipoSeleccionado === TipoTransaccion.TRANSFERENCIA
+                  ? 'No hay cuentas disponibles para esta selección'
+                  : 'No hay cuentas con ese nombre'}
+              </HelperText>
+            ) : null}
           </ScrollView>
         </Modal>
       </Portal>
