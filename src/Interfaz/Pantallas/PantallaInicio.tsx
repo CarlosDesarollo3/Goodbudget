@@ -51,7 +51,8 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     ReubicarGrupo,
     ReubicarCuenta,
     EliminarGrupo,
-    EliminarCuenta
+    EliminarCuenta,
+    ListarAvancesObjetivos
   } = UsarAlmacenAplicacion();
   const insets = useSafeAreaInsets();
   const [expansionPorGrupo, setExpansionPorGrupo] = React.useState<Record<string, boolean>>({});
@@ -66,6 +67,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
   const [objetivoArrastre, setObjetivoArrastre] = React.useState<string | null>(null);
   const [zonaRaiz, setZonaRaiz] = React.useState<{ y: number; alto: number }>({ y: 0, alto: 0 });
   const [punteroArrastre, setPunteroArrastre] = React.useState<{ x: number; y: number } | null>(null);
+  const [avisoObjetivos, setAvisoObjetivos] = React.useState<string | null>(null);
   const zonasArrastre = React.useRef<Record<string, ZonaArrastre>>({});
   const scrollActualRef = React.useRef(0);
   const vistaRaizRef = React.useRef<View | null>(null);
@@ -90,6 +92,29 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     });
   };
   const cuentas = React.useMemo(() => Object.values(cuentasPorGrupo).flat(), [cuentasPorGrupo]);
+  const avancesObjetivos = React.useMemo(() => ListarAvancesObjetivos(), [ListarAvancesObjetivos]);
+
+  React.useEffect(() => {
+    const alerta = avancesObjetivos.find((avance) => avance.excedido || avance.alertaUmbral);
+
+    if (alerta) {
+      const prefijo = alerta.excedido ? 'Sobregasto detectado' : 'Objetivo por vencer';
+      setAvisoObjetivos(`${prefijo}: ${Math.round(alerta.progreso * 100)}% utilizado`);
+    }
+  }, [avancesObjetivos]);
+
+  const mapaAvancePorCuenta = React.useMemo(
+    () =>
+      avancesObjetivos.reduce<Record<string, { progreso: number; alerta: boolean }>>((acumulado, avance) => {
+        const previo = acumulado[avance.objetivo.idCuenta];
+        const progreso = previo ? Math.max(previo.progreso, avance.progreso) : avance.progreso;
+        const alerta = Boolean(previo?.alerta) || avance.alertaUmbral || avance.excedido;
+        acumulado[avance.objetivo.idCuenta] = { progreso, alerta };
+        return acumulado;
+      }, {}),
+    [avancesObjetivos]
+  );
+
   const mapaBalances = React.useMemo(
     () =>
       cuentas.reduce<Record<string, number>>((acumulado, cuenta) => {
@@ -314,6 +339,8 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
                   nombre={cuenta.nombre}
                   balance={ObtenerBalanceCuenta(cuenta.id)}
                   moneda={moneda}
+                  progresoObjetivo={mapaAvancePorCuenta[cuenta.id]?.progreso}
+                  alertaObjetivo={mapaAvancePorCuenta[cuenta.id]?.alerta}
                   AlSostener={() => iniciarArrastre({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
                   AlPresionar={() => navigation.navigate('PantallaDetalleCuenta', { idCuenta: cuenta.id, nombreCuenta: cuenta.nombre })}
                 />
@@ -401,6 +428,8 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
                 nombre={cuenta.nombre}
                 balance={ObtenerBalanceCuenta(cuenta.id)}
                 moneda={moneda}
+                progresoObjetivo={mapaAvancePorCuenta[cuenta.id]?.progreso}
+                alertaObjetivo={mapaAvancePorCuenta[cuenta.id]?.alerta}
                 AlSostener={() => iniciarArrastre({ id: cuenta.id, nombre: cuenta.nombre, tipo: 'cuenta' })}
                 AlPresionar={() => navigation.navigate('PantallaDetalleCuenta', { idCuenta: cuenta.id, nombreCuenta: cuenta.nombre })}
               />
@@ -472,6 +501,9 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
 
       <Snackbar visible={mostrarAvisoGesto} onDismiss={() => setMostrarAvisoGesto(false)} duration={1800}>
         Completa el gesto para activar la acción
+      </Snackbar>
+      <Snackbar visible={Boolean(avisoObjetivos)} onDismiss={() => setAvisoObjetivos(null)} duration={2800}>
+        {avisoObjetivos}
       </Snackbar>
       <Snackbar visible={Boolean(avisoReubicacion)} onDismiss={() => setAvisoReubicacion(null)} duration={2200}>
         {avisoReubicacion}

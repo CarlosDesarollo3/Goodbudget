@@ -1,4 +1,4 @@
-import { Categoria, Cuenta, Grupo, ReglaRecurrente, Transaccion } from '@/Dominio/Modelos';
+import { AvanceObjetivoPresupuesto, Categoria, Cuenta, Grupo, ObjetivoPresupuesto, ReglaRecurrente, Transaccion } from '@/Dominio/Modelos';
 
 export interface RepositorioSobres {
   ListarGrupos(): Grupo[];
@@ -36,4 +36,13 @@ export interface RepositorioReglas {
 export interface RepositorioConfiguracion {
   ObtenerMoneda(): string;
   GuardarMoneda(moneda: string): void;
+}
+
+export interface RepositorioObjetivosPresupuesto {
+  ListarObjetivosPresupuesto(): ObjetivoPresupuesto[];
+  GuardarObjetivoPresupuesto(objetivo: ObjetivoPresupuesto): void;
+  ActualizarObjetivoPresupuesto(objetivo: ObjetivoPresupuesto): void;
+  EliminarObjetivoPresupuesto(idObjetivo: string): void;
+  CalcularAvanceObjetivo(idObjetivo: string, mesReferencia?: string): AvanceObjetivoPresupuesto | null;
+  ListarAvancesObjetivos(mesReferencia?: string, idCuenta?: string): AvanceObjetivoPresupuesto[];
 }

@@ -1,9 +1,10 @@
-import { Categoria, Cuenta, Grupo, ReglaRecurrente, Transaccion } from '@/Dominio/Modelos';
+import { AvanceObjetivoPresupuesto, Categoria, Cuenta, Grupo, ObjetivoPresupuesto, ReglaRecurrente, Transaccion, TipoTransaccion } from '@/Dominio/Modelos';
 import { ErrorDatos, RegistrarLogDesarrollo } from '@/Utilidades/Errores';
 import { ObtenerBd } from '../Bd/ConexionBd';
 import {
   RepositorioCategorias,
   RepositorioConfiguracion,
+  RepositorioObjetivosPresupuesto,
   RepositorioReglas,
   RepositorioSobres,
   RepositorioTransacciones
@@ -11,8 +12,27 @@ import {
 
 const MapearBooleano = (valor: number): boolean => valor === 1;
 
+const ObtenerMesReferencia = (fecha = new Date()): string => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+
+const ObtenerRangoMes = (mesReferencia: string): { inicio: string; fin: string; mesAnterior: string } => {
+  const [anioTexto, mesTexto] = mesReferencia.split('-');
+  const anio = Number(anioTexto);
+  const mes = Number(mesTexto);
+  const inicioFecha = new Date(anio, mes - 1, 1);
+  const finFecha = new Date(anio, mes, 1);
+  const anteriorFecha = new Date(anio, mes - 2, 1);
+
+  const formatear = (fecha: Date): string => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+
+  return {
+    inicio: inicioFecha.toISOString(),
+    fin: finFecha.toISOString(),
+    mesAnterior: formatear(anteriorFecha)
+  };
+};
+
 export class RepositorioSqlite
-  implements RepositorioSobres, RepositorioTransacciones, RepositorioCategorias, RepositorioReglas, RepositorioConfiguracion
+  implements RepositorioSobres, RepositorioTransacciones, RepositorioCategorias, RepositorioReglas, RepositorioConfiguracion, RepositorioObjetivosPresupuesto
 {
   private bd = ObtenerBd();
 
@@ -246,6 +266,121 @@ export class RepositorioSqlite
         regla.id
       ]
     );
+  }
+
+
+  ListarObjetivosPresupuesto(): ObjetivoPresupuesto[] {
+    const filas = this.bd.getAllSync<(Omit<ObjetivoPresupuesto, 'rolloverHabilitado' | 'activo'> & { rolloverHabilitado: number; activo: number })>(
+      'SELECT * FROM objetivosPresupuesto ORDER BY creadoEn DESC'
+    );
+    return filas.map((fila) => ({
+      ...fila,
+      rolloverHabilitado: MapearBooleano(fila.rolloverHabilitado),
+      activo: MapearBooleano(fila.activo)
+    }));
+  }
+
+  GuardarObjetivoPresupuesto(objetivo: ObjetivoPresupuesto): void {
+    this.bd.runSync(
+      `INSERT INTO objetivosPresupuesto
+       (id,idCuenta,idCategoria,montoMensual,umbralAlerta,rolloverHabilitado,activo,creadoEn,actualizadoEn)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+      [
+        objetivo.id,
+        objetivo.idCuenta,
+        objetivo.idCategoria,
+        objetivo.montoMensual,
+        objetivo.umbralAlerta,
+        objetivo.rolloverHabilitado ? 1 : 0,
+        objetivo.activo ? 1 : 0,
+        objetivo.creadoEn,
+        objetivo.actualizadoEn
+      ]
+    );
+  }
+
+  ActualizarObjetivoPresupuesto(objetivo: ObjetivoPresupuesto): void {
+    this.bd.runSync(
+      `UPDATE objetivosPresupuesto
+       SET idCuenta = ?, idCategoria = ?, montoMensual = ?, umbralAlerta = ?, rolloverHabilitado = ?, activo = ?, actualizadoEn = ?
+       WHERE id = ?`,
+      [
+        objetivo.idCuenta,
+        objetivo.idCategoria,
+        objetivo.montoMensual,
+        objetivo.umbralAlerta,
+        objetivo.rolloverHabilitado ? 1 : 0,
+        objetivo.activo ? 1 : 0,
+        objetivo.actualizadoEn,
+        objetivo.id
+      ]
+    );
+  }
+
+  EliminarObjetivoPresupuesto(idObjetivo: string): void {
+    this.bd.runSync('DELETE FROM objetivosPresupuesto WHERE id = ?', [idObjetivo]);
+  }
+
+  CalcularAvanceObjetivo(idObjetivo: string, mesReferencia = ObtenerMesReferencia()): AvanceObjetivoPresupuesto | null {
+    const objetivo = this.ListarObjetivosPresupuesto().find((item) => item.id === idObjetivo);
+
+    if (!objetivo || !objetivo.activo) {
+      return null;
+    }
+
+    return this.ConstruirAvanceObjetivo(objetivo, mesReferencia);
+  }
+
+  ListarAvancesObjetivos(mesReferencia = ObtenerMesReferencia(), idCuenta?: string): AvanceObjetivoPresupuesto[] {
+    const objetivos = this.ListarObjetivosPresupuesto().filter((objetivo) => objetivo.activo && (!idCuenta || objetivo.idCuenta === idCuenta));
+    return objetivos
+      .map((objetivo) => this.ConstruirAvanceObjetivo(objetivo, mesReferencia))
+      .sort((a, b) => b.progreso - a.progreso);
+  }
+
+  private ObtenerGastoCategoriaEnMes(idCuenta: string, idCategoria: string, inicio: string, fin: string): number {
+    const resultado = this.bd.getFirstSync<{ total: number }>(
+      `SELECT COALESCE(SUM(monto), 0) as total
+       FROM transacciones
+       WHERE tipo = ?
+         AND idCuentaOrigen = ?
+         AND idCategoria = ?
+         AND fecha >= ?
+         AND fecha < ?`,
+      [TipoTransaccion.GASTO, idCuenta, idCategoria, inicio, fin]
+    );
+
+    return resultado?.total ?? 0;
+  }
+
+  private ConstruirAvanceObjetivo(objetivo: ObjetivoPresupuesto, mesReferencia: string): AvanceObjetivoPresupuesto {
+    const rangoMes = ObtenerRangoMes(mesReferencia);
+    const gastoActual = this.ObtenerGastoCategoriaEnMes(objetivo.idCuenta, objetivo.idCategoria, rangoMes.inicio, rangoMes.fin);
+    let presupuestoDisponible = objetivo.montoMensual;
+
+    if (objetivo.rolloverHabilitado) {
+      const rangoAnterior = ObtenerRangoMes(rangoMes.mesAnterior);
+      const gastoMesAnterior = this.ObtenerGastoCategoriaEnMes(
+        objetivo.idCuenta,
+        objetivo.idCategoria,
+        rangoAnterior.inicio,
+        rangoAnterior.fin
+      );
+      const sobranteAnterior = Math.max(0, objetivo.montoMensual - gastoMesAnterior);
+      presupuestoDisponible += sobranteAnterior;
+    }
+
+    const progreso = presupuestoDisponible <= 0 ? 0 : gastoActual / presupuestoDisponible;
+
+    return {
+      objetivo,
+      mesReferencia,
+      presupuestoDisponible,
+      gastoActual,
+      progreso,
+      excedido: gastoActual > presupuestoDisponible,
+      alertaUmbral: progreso >= objetivo.umbralAlerta
+    };
   }
 
   ObtenerMoneda(): string {
