@@ -6,6 +6,7 @@ import {
   RepositorioCategorias,
   RepositorioConfiguracion,
   RepositorioObjetivosPresupuesto,
+  RespaldoDatos,
   RepositorioReglas,
   RepositorioSobres,
   RepositorioTransacciones
