@@ -6,6 +6,7 @@ import { RepositorioSqlite } from '@/Datos/Repositorios/RepositorioSqlite';
 import { InicializarBd } from '@/Datos/Bd/ConexionBd';
 import { CalcularBalanceCuenta } from '@/Servicios/MotorBalances';
 import { MotorRecurrencias } from '@/Servicios/MotorRecurrencias';
+import { ModoTema } from '@/Interfaz/Tema/temaAplicacion';
 
 interface EstadoAplicacion {
   grupos: Grupo[];
@@ -15,6 +16,7 @@ interface EstadoAplicacion {
   transaccionesPorCuenta: Record<string, Transaccion[]>;
   moneda: string;
   errorUi?: string;
+  modoTema: ModoTema;
   InicializarDatos(): void;
   CrearGrupo(nombre: string, idGrupoPadre: string | null): void;
   CrearCuenta(nombre: string, idGrupoPadre: string | null, saldoInicial?: number): void;
@@ -36,8 +38,7 @@ interface EstadoAplicacion {
   EliminarReglaRecurrente(idRegla: string): void;
   EjecutarReglasPendientes(): number;
   GuardarMoneda(moneda: string): void;
-  ObtenerValorConfiguracion(clave: string): string | null;
-  GuardarValorConfiguracion(clave: string, valor?: string): void;
+  GuardarModoTema(modoTema: ModoTema): void;
   ObtenerBalanceCuenta(idCuenta: string): number;
 }
 
@@ -53,6 +54,7 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
   reglas: [],
   transaccionesPorCuenta: {},
   moneda: 'MXN',
+  modoTema: 'sistema',
 
   InicializarDatos: () => {
     InicializarBd();
@@ -66,8 +68,9 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     const categorias = repositorio.ListarCategorias();
     const reglas = repositorio.ListarReglas();
     const moneda = repositorio.ObtenerMoneda();
+    const modoTema = repositorio.ObtenerModoTema();
 
-    set({ grupos, cuentasPorGrupo, categorias, reglas, moneda });
+    set({ grupos, cuentasPorGrupo, categorias, reglas, moneda, modoTema });
   },
 
   CrearGrupo: (nombre, idGrupoPadre) => {
@@ -230,10 +233,9 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     set({ moneda });
   },
 
-  ObtenerValorConfiguracion: (clave) => repositorio.ObtenerValorConfiguracion(clave),
-
-  GuardarValorConfiguracion: (clave, valor) => {
-    repositorio.GuardarValorConfiguracion(clave, valor);
+  GuardarModoTema: (modoTema) => {
+    repositorio.GuardarModoTema(modoTema);
+    set({ modoTema });
   },
 
   ObtenerBalanceCuenta: (idCuenta) => {
