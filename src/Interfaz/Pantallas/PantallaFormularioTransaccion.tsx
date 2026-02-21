@@ -56,7 +56,6 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
   const tipoSeleccionado = useWatch({ control, name: 'tipo' });
   const cuentaOrigenSeleccionada = useWatch({ control, name: 'idCuentaOrigen' });
   const cuentaDestinoSeleccionada = useWatch({ control, name: 'idCuentaDestino' });
-  const montoCapturado = useWatch({ control, name: 'monto' });
   const cuentaOrigen = React.useMemo(() => cuentas.find((cuenta) => cuenta.id === cuentaOrigenSeleccionada), [cuentas, cuentaOrigenSeleccionada]);
   const cuentaDestino = React.useMemo(() => cuentas.find((cuenta) => cuenta.id === cuentaDestinoSeleccionada), [cuentas, cuentaDestinoSeleccionada]);
 
@@ -108,14 +107,16 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
   const requiereCategoria = tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.INGRESO;
   const requiereCuentaOrigen = tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.INGRESO || tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
   const requiereCuentaDestino = tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
-  const montoMostrado = montoCapturado ?? 0;
-  const montoConSigno = tipoSeleccionado === TipoTransaccion.GASTO ? -Math.abs(montoMostrado) : Math.abs(montoMostrado);
-
-  const colorMonto = montoConSigno === 0
-    ? styles.montoNeutro
-    : montoConSigno > 0
+  const colorMonto = tipoSeleccionado === TipoTransaccion.GASTO
+    ? styles.montoNegativo
+    : tipoSeleccionado === TipoTransaccion.INGRESO
       ? styles.montoPositivo
-      : styles.montoNegativo;
+      : styles.montoNeutro;
+  const colorMontoTexto = tipoSeleccionado === TipoTransaccion.GASTO
+    ? '#C4362D'
+    : tipoSeleccionado === TipoTransaccion.INGRESO
+      ? '#1F8F4C'
+      : '#7A7A7A';
 
   const abrirSelectorCuentas = (campo: 'idCuentaOrigen' | 'idCuentaDestino'): void => {
     setBusquedaCuenta('');
@@ -140,6 +141,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
               keyboardType="decimal-pad"
               value={value === undefined ? '0' : String(value)}
               onChangeText={(texto) => onChange(texto === '' ? undefined : Number(texto.replace(',', '.')))}
+              textColor={colorMontoTexto}
               style={[styles.inputMontoSuperior, colorMonto]}
             />
           )}
@@ -172,6 +174,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
           </Pressable>
         </View>
       ) : null}
+      <HelperText type="error" visible={!!errors.idCategoria}>{errors.idCategoria?.message}</HelperText>
 
       {tipoSeleccionado === TipoTransaccion.TRANSFERENCIA ? (
         <View style={styles.tarjetaTransferencia}>
