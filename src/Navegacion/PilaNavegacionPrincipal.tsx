@@ -46,7 +46,7 @@ const NavegacionPestanasPrincipal = (): React.JSX.Element => (
       }
     })}
   >
-    <Pestanas.Screen name="PantallaInicio" component={PantallaInicio} options={{ title: 'Manejo de Sobres' }} />
+    <Pestanas.Screen name="PantallaInicio" component={PantallaInicio} options={{ title: 'Inicio' }} />
     <Pestanas.Screen name="PantallaCategorias" component={PantallaCategorias} options={{ title: 'Categorías' }} />
     <Pestanas.Screen name="PantallaAnalitica" component={PantallaAnalitica} options={{ title: 'Analítica' }} />
   </Pestanas.Navigator>
@@ -71,6 +71,12 @@ const CrearTemaNavegacion = (tema: TemaAplicacion): TemaNavegacion => ({
 });
 
 const rutasSinAccionRapida: Array<keyof ParametrosNavegacion> = ['PantallaFormularioTransaccion'];
+
+
+type RutaActiva = {
+  nombre: keyof ParametrosNavegacion;
+  parametros?: ParametrosNavegacion[keyof ParametrosNavegacion];
+};
 
 const ObtenerNombreRutaActiva = (estado: any): keyof ParametrosNavegacion | undefined => {
   if (!estado || !stateHasRoutes(estado)) {
@@ -97,7 +103,7 @@ const AccionRapidaGlobal = ({
   tema
 }: {
   navigationRef: React.RefObject<NavigationContainerRef<ParametrosNavegacion>>;
-  rutaActiva?: keyof ParametrosNavegacion;
+  rutaActiva: RutaActiva;
   tema: TemaAplicacion;
 }): React.JSX.Element | null => {
   const insets = useSafeAreaInsets();
@@ -105,19 +111,23 @@ const AccionRapidaGlobal = ({
   const { ObtenerValorConfiguracion } = UsarAlmacenAplicacion();
 
   React.useEffect(() => {
-    if (!rutasSinAccionRapida.includes(rutaActiva ?? 'PantallaPestanasPrincipal')) {
+    if (!rutasSinAccionRapida.includes(rutaActiva.nombre)) {
       return;
     }
 
     setExpandido(false);
-  }, [rutaActiva]);
+  }, [rutaActiva.nombre]);
 
-  if (rutasSinAccionRapida.includes(rutaActiva ?? 'PantallaPestanasPrincipal')) {
+  if (rutasSinAccionRapida.includes(rutaActiva.nombre)) {
     return null;
   }
 
+  const idCuentaContexto = rutaActiva.nombre === 'PantallaDetalleCuenta'
+    ? (rutaActiva.parametros as ParametrosNavegacion['PantallaDetalleCuenta'] | undefined)?.idCuenta
+    : undefined;
+
   const navegarFormulario = (tipoPredeterminado?: TipoTransaccion): void => {
-    const idCuentaPredeterminada = ObtenerValorConfiguracion(CLAVE_ULTIMA_CUENTA) ?? undefined;
+    const idCuentaPredeterminada = idCuentaContexto ?? ObtenerValorConfiguracion(CLAVE_ULTIMA_CUENTA) ?? undefined;
     const idCategoriaPredeterminada = ObtenerValorConfiguracion(CLAVE_ULTIMA_CATEGORIA) ?? undefined;
     navigationRef.current?.navigate('PantallaFormularioTransaccion', {
       idCuentaPredeterminada,
@@ -127,36 +137,55 @@ const AccionRapidaGlobal = ({
     setExpandido(false);
   };
 
+  const navegarInicioConAccion = (accionRapida: 'cuenta' | 'grupo'): void => {
+    navigationRef.current?.navigate('PantallaPestanasPrincipal', {
+      screen: 'PantallaInicio',
+      params: { accionRapida }
+    });
+    setExpandido(false);
+  };
+
+  const acciones = rutaActiva.nombre === 'PantallaInicio'
+    ? [
+        { icon: 'credit-card-plus-outline', label: 'Nueva cuenta', onPress: () => navegarInicioConAccion('cuenta') },
+        { icon: 'folder-plus-outline', label: 'Nuevo grupo', onPress: () => navegarInicioConAccion('grupo') }
+      ]
+    : [
+        { icon: 'arrow-up-bold-circle-outline', label: 'Ingreso', onPress: () => navegarFormulario(TipoTransaccion.INGRESO) },
+        { icon: 'swap-horizontal', label: 'Transferencia', onPress: () => navegarFormulario(TipoTransaccion.TRANSFERENCIA) },
+        { icon: 'arrow-down-bold-circle-outline', label: 'Gasto', onPress: () => navegarFormulario(TipoTransaccion.GASTO) }
+      ];
+
   return (
-    <View pointerEvents="box-none" style={[styles.accionesRapidasContenedor, { bottom: 16 + insets.bottom + 56 }]}>
-      <FAB.Group
-        open={expandido}
-        visible
-        icon={expandido ? 'close' : 'plus'}
-        color={tema.colors.onPrimary}
-        fabStyle={{ backgroundColor: tema.colors.primary }}
-        backdropColor="transparent"
-        actions={[
-          { icon: 'arrow-up-bold-circle-outline', label: 'Ingreso', onPress: () => navegarFormulario(TipoTransaccion.INGRESO) },
-          { icon: 'swap-horizontal', label: 'Transferencia', onPress: () => navegarFormulario(TipoTransaccion.TRANSFERENCIA) },
-          { icon: 'arrow-down-bold-circle-outline', label: 'Gasto', onPress: () => navegarFormulario(TipoTransaccion.GASTO) }
-        ]}
-        onStateChange={({ open }) => setExpandido(open)}
-      />
-    </View>
+    <FAB.Group
+      open={expandido}
+      visible
+      icon={expandido ? 'close' : 'plus'}
+      color={tema.colors.onPrimary}
+      fabStyle={{ backgroundColor: tema.colors.primary }}
+      style={[styles.fabGlobal, { bottom: 96 + insets.bottom }]}
+      backdropColor="rgba(0, 0, 0, 0.16)"
+      actions={acciones}
+      onStateChange={({ open }) => setExpandido(open)}
+    />
   );
 };
 
 export const PilaNavegacionPrincipal = ({ tema }: PropsPilaNavegacionPrincipal): React.JSX.Element => {
   const temaNavegacion = CrearTemaNavegacion(tema);
   const navigationRef = React.useRef<NavigationContainerRef<ParametrosNavegacion>>(null);
-  const [rutaActiva, setRutaActiva] = React.useState<keyof ParametrosNavegacion>('PantallaPestanasPrincipal');
+  const [rutaActiva, setRutaActiva] = React.useState<RutaActiva>({ nombre: 'PantallaPestanasPrincipal' });
 
   const actualizarRutaActiva = React.useCallback(() => {
     const estado = navigationRef.current?.getRootState();
     const siguienteRuta = ObtenerNombreRutaActiva(estado);
+    const rutaActual = navigationRef.current?.getCurrentRoute();
+
     if (siguienteRuta) {
-      setRutaActiva(siguienteRuta);
+      setRutaActiva({
+        nombre: siguienteRuta,
+        parametros: rutaActual?.params as ParametrosNavegacion[keyof ParametrosNavegacion] | undefined
+      });
     }
   }, []);
 
@@ -212,9 +241,8 @@ const styles = StyleSheet.create({
   contenedorNavegacion: {
     flex: 1
   },
-  accionesRapidasContenedor: {
+  fabGlobal: {
     position: 'absolute',
-    right: 0,
-    left: 0
+    right: 16
   }
 });

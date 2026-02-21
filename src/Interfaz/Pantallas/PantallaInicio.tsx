@@ -2,8 +2,9 @@ import React from 'react';
 import { GestureResponderEvent, LayoutChangeEvent, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Dialog, Portal, Snackbar, Surface, Text } from 'react-native-paper';
 import { InputConCerrarTeclado } from '@/Interfaz/Componentes/InputConCerrarTeclado';
+import { RouteProp, useRoute } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ParametrosNavegacion } from '@/Navegacion/TiposNavegacion';
+import { ParametrosNavegacion, ParametrosPestanasPrincipal } from '@/Navegacion/TiposNavegacion';
 import { TarjetaGrupo } from '@/Interfaz/Componentes/TarjetaGrupo';
 import { TarjetaCuenta } from '@/Interfaz/Componentes/TarjetaCuenta';
 import { CerrarFilaAbierta, FilaDeslizableAcciones } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
@@ -56,6 +57,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     ListarAvancesObjetivos
   } = UsarAlmacenAplicacion();
   const insets = useSafeAreaInsets();
+  const rutaPestana = useRoute<RouteProp<ParametrosPestanasPrincipal, 'PantallaInicio'>>();
   const [expansionPorGrupo, setExpansionPorGrupo] = React.useState<Record<string, boolean>>({});
   const [nodoRenombrar, setNodoRenombrar] = React.useState<NodoSeleccionado | null>(null);
   const [nodoEliminar, setNodoEliminar] = React.useState<NodoSeleccionado | null>(null);
@@ -178,6 +180,17 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     setNombreTemporal('');
     setMontoInicialTemporal('0');
   };
+
+  React.useEffect(() => {
+    const accionRapida = rutaPestana.params?.accionRapida;
+
+    if (!accionRapida) {
+      return;
+    }
+
+    abrirDialogoCreacion(accionRapida);
+    (navigation as any).setParams({ accionRapida: undefined });
+  }, [rutaPestana.params?.accionRapida]);
 
   const obtenerMontoInicial = (): number => {
     const monto = Number(montoInicialTemporal.replace(',', '.'));
@@ -446,14 +459,6 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
         </Surface>
       ) : null}
 
-      <View style={[styles.accionesInferiores, { bottom: 12 + insets.bottom }]}>
-        <Button mode="contained" style={styles.botonAccion} onPress={() => abrirDialogoCreacion('cuenta')}>
-          Nueva cuenta
-        </Button>
-        <Button mode="outlined" style={styles.botonAccion} onPress={() => abrirDialogoCreacion('grupo')}>
-          Nuevo grupo
-        </Button>
-      </View>
 
       <Portal>
         <Dialog visible={Boolean(creacionPendiente)} onDismiss={() => setCreacionPendiente(null)}>
@@ -567,17 +572,5 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 10,
     backgroundColor: '#FFFFFFEE'
-  },
-  accionesInferiores: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8
-  },
-  botonAccion: {
-    flex: 1,
-    maxWidth: 220
   }
 });
