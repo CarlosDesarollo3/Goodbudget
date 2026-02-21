@@ -17,7 +17,7 @@ interface EstadoAplicacion {
   errorUi?: string;
   InicializarDatos(): void;
   CrearGrupo(nombre: string, idGrupoPadre: string | null): void;
-  CrearCuenta(nombre: string, idGrupoPadre: string | null): void;
+  CrearCuenta(nombre: string, idGrupoPadre: string | null, saldoInicial?: number): void;
   RenombrarGrupo(idGrupo: string, nombre: string): void;
   RenombrarCuenta(idCuenta: string, nombre: string): void;
   ReubicarGrupo(idGrupo: string, idNuevoGrupoPadre: string | null): boolean;
@@ -71,10 +71,19 @@ export const UsarAlmacenAplicacion = create<EstadoAplicacion>((set, get) => ({
     get().InicializarDatos();
   },
 
-  CrearCuenta: (nombre, idGrupoPadre) => {
+  CrearCuenta: (nombre, idGrupoPadre, saldoInicial = 0) => {
     InicializarBd();
     const nuevaCuenta: Cuenta = { id: GenerarUuid(), nombre, idGrupoPadre, creadoEn: formatISO(new Date()) };
     repositorio.CrearCuenta(nuevaCuenta);
+
+    if (saldoInicial !== 0) {
+      repositorio.CrearTransaccion({
+        ...CrearTransaccionAjusteSaldoExacto(nuevaCuenta.id, saldoInicial),
+        id: GenerarUuid(),
+        creadoEn: formatISO(new Date())
+      });
+    }
+
     get().InicializarDatos();
   },
 

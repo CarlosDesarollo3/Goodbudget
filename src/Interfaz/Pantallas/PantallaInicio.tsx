@@ -59,6 +59,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
   const [nodoEliminar, setNodoEliminar] = React.useState<NodoSeleccionado | null>(null);
   const [creacionPendiente, setCreacionPendiente] = React.useState<CreacionPendiente | null>(null);
   const [nombreTemporal, setNombreTemporal] = React.useState('');
+  const [montoInicialTemporal, setMontoInicialTemporal] = React.useState('0');
   const [mostrarAvisoGesto, setMostrarAvisoGesto] = React.useState(false);
   const [avisoReubicacion, setAvisoReubicacion] = React.useState<string | null>(null);
   const [nodoArrastrado, setNodoArrastrado] = React.useState<NodoArrastrable | null>(null);
@@ -149,6 +150,12 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
   const abrirDialogoCreacion = (tipo: TipoCreacion): void => {
     setCreacionPendiente({ tipo });
     setNombreTemporal('');
+    setMontoInicialTemporal('0');
+  };
+
+  const obtenerMontoInicial = (): number => {
+    const monto = Number(montoInicialTemporal.replace(',', '.'));
+    return Number.isFinite(monto) ? monto : 0;
   };
 
   const confirmarCreacion = (): void => {
@@ -161,7 +168,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
     if (creacionPendiente.tipo === 'cuenta') {
       const totalCuentasRaiz = cuentasPorGrupo[CLAVE_CUENTAS_RAIZ]?.length ?? 0;
       const nombreDefecto = `Cuenta ${totalCuentasRaiz + 1}`;
-      CrearCuenta(nombreCapturado || nombreDefecto, null);
+      CrearCuenta(nombreCapturado || nombreDefecto, null, obtenerMontoInicial());
     } else {
       const gruposRaiz = grupos.filter((grupo) => grupo.idGrupoPadre === null).length;
       const nombreDefecto = `Grupo ${gruposRaiz + 1}`;
@@ -170,6 +177,7 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
 
     setCreacionPendiente(null);
     setNombreTemporal('');
+    setMontoInicialTemporal('0');
   };
 
   const registrarZonaArrastre = (clave: string, idGrupoPadre: string | null) => (evento: LayoutChangeEvent): void => {
@@ -422,6 +430,16 @@ export const PantallaInicio = ({ navigation }: NativeStackScreenProps<Parametros
           <Dialog.Title>{creacionPendiente?.tipo === 'cuenta' ? 'Nueva cuenta' : 'Nuevo grupo'}</Dialog.Title>
           <Dialog.Content>
             <TextInput value={nombreTemporal} onChangeText={setNombreTemporal} mode="outlined" label="Nombre (opcional)" autoFocus />
+            {creacionPendiente?.tipo === 'cuenta' ? (
+              <TextInput
+                value={montoInicialTemporal}
+                onChangeText={setMontoInicialTemporal}
+                mode="outlined"
+                keyboardType="decimal-pad"
+                label="Monto inicial"
+                style={styles.campoMontoInicial}
+              />
+            ) : null}
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={() => setCreacionPendiente(null)}>Cancelar</Button>
@@ -475,6 +493,9 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     backgroundColor: '#FFFFFF'
+  },
+  campoMontoInicial: {
+    marginTop: 10
   },
   zonaRaiz: {
     borderRadius: 12,
