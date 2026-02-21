@@ -49,11 +49,16 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
       </ScrollView>
 
       <View style={styles.accionesInferiores}>
-        <Button mode="contained" onPress={() => navigation.navigate('PantallaFormularioTransaccion', { idCuentaPredeterminada: idCuenta })}>
+        <Button
+          mode="contained"
+          style={styles.botonAccion}
+          onPress={() => navigation.navigate('PantallaFormularioTransaccion', { idCuentaPredeterminada: idCuenta })}
+        >
           Añadir transacción
         </Button>
         <Button
           mode="outlined"
+          style={styles.botonAccion}
           onPress={() => {
             const grupo = ConvertirCuentaEnGrupo(idCuenta);
 
@@ -101,7 +106,10 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     bottom: 16,
-    flexDirection: 'row',
-    gap: 8
+    alignItems: 'center',
+    gap: 12
+  },
+  botonAccion: {
+    minWidth: 220
   }
 });
