@@ -39,7 +39,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
           tipo: transaccionEditar.tipo === TipoTransaccion.AJUSTE ? TipoTransaccion.GASTO : transaccionEditar.tipo,
           monto: transaccionEditar.monto,
           idCuentaOrigen: transaccionEditar.idCuentaOrigen,
-          idCuentaDestino: transaccionEditar.idCuentaDestino ?? transaccionEditar.idCuentaOrigen,
+          idCuentaDestino: transaccionEditar.idCuentaDestino,
           idCategoria: transaccionEditar.idCategoria,
           nota: transaccionEditar.nota,
           fecha: transaccionEditar.fecha
@@ -86,20 +86,11 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
       return;
     }
 
-    if (tipoSeleccionado === TipoTransaccion.GASTO) {
+    if (tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.INGRESO) {
       if (!cuentaOrigenSeleccionada) {
         setValue('idCuentaOrigen', idCuentaPredeterminada ?? cuentas[0]?.id, { shouldValidate: true });
       }
       setValue('idCuentaDestino', undefined, { shouldValidate: false });
-      return;
-    }
-
-    if (tipoSeleccionado === TipoTransaccion.INGRESO) {
-      const destinoSugerido = cuentaDestinoSeleccionada ?? cuentaOrigenSeleccionada ?? idCuentaPredeterminada ?? cuentas[0]?.id;
-      if (cuentaDestinoSeleccionada !== destinoSugerido) {
-        setValue('idCuentaDestino', destinoSugerido, { shouldValidate: true });
-      }
-      setValue('idCuentaOrigen', undefined, { shouldValidate: false });
       return;
     }
 
@@ -133,8 +124,8 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
   };
 
   const requiereCategoria = tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.INGRESO;
-  const requiereCuentaOrigen = tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
-  const requiereCuentaDestino = tipoSeleccionado === TipoTransaccion.INGRESO || tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
+  const requiereCuentaOrigen = tipoSeleccionado === TipoTransaccion.GASTO || tipoSeleccionado === TipoTransaccion.INGRESO || tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
+  const requiereCuentaDestino = tipoSeleccionado === TipoTransaccion.TRANSFERENCIA;
   const colorMonto = tipoSeleccionado === TipoTransaccion.GASTO
     ? styles.montoNegativo
     : tipoSeleccionado === TipoTransaccion.INGRESO
@@ -153,7 +144,7 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
 
   return (
     <ScrollView contentContainerStyle={styles.contenedor}>
-      <Text variant="titleMedium">{transaccionEditar ? 'Editar transacción' : 'Nueva transacción'}</Text>
+      <Text variant="titleMedium" style={styles.tituloPantalla}>{transaccionEditar ? 'Editar transacción' : 'Nueva transacción'}</Text>
 
       <View style={styles.resumenMonto}>
         <Text variant="labelLarge">Monto</Text>
@@ -213,16 +204,6 @@ export const PantallaFormularioTransaccion = ({ route, navigation }: NativeStack
           <Text variant="headlineSmall">→</Text>
           <Pressable style={styles.ladoTransferencia} onPress={() => abrirSelectorCuentas('idCuentaDestino')}>
             <Text variant="titleSmall">{cuentaDestino?.nombre ?? 'Destino'}</Text>
-            <Text variant="bodySmall">Toca para cambiar</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {requiereCuentaDestino && tipoSeleccionado !== TipoTransaccion.TRANSFERENCIA ? (
-        <View style={styles.bloqueCampo}>
-          <Text variant="labelLarge">Cuenta destino</Text>
-          <Pressable style={styles.tarjetaCuenta} onPress={() => abrirSelectorCuentas('idCuentaDestino')}>
-            <Text variant="titleMedium">{cuentaDestino?.nombre ?? 'Seleccionar cuenta'}</Text>
             <Text variant="bodySmall">Toca para cambiar</Text>
           </Pressable>
         </View>
@@ -322,6 +303,9 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: 32
   },
+  tituloPantalla: {
+    textAlign: 'center'
+  },
   resumenMonto: {
     borderRadius: 12,
     padding: 14,
@@ -387,7 +371,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: '#FFFFFF',
     gap: 10,
-    maxHeight: '88%'
+    minHeight: '65%',
+    maxHeight: '94%'
   },
   listaCuentasModal: {
     flexGrow: 1

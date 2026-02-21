@@ -18,8 +18,8 @@ export const EsquemaTransaccionFormulario = z
       contexto.addIssue({ code: z.ZodIssueCode.custom, message: 'Debe indicar la cuenta origen' });
     }
 
-    if (valor.tipo === TipoTransaccion.INGRESO && !valor.idCuentaDestino) {
-      contexto.addIssue({ code: z.ZodIssueCode.custom, message: 'Debe indicar la cuenta destino' });
+    if (valor.tipo === TipoTransaccion.INGRESO && !valor.idCuentaOrigen) {
+      contexto.addIssue({ code: z.ZodIssueCode.custom, message: 'Debe indicar la cuenta origen' });
     }
 
     if (valor.tipo === TipoTransaccion.AJUSTE && !valor.idCuentaDestino) {
