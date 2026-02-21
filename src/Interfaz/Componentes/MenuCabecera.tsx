@@ -40,6 +40,14 @@ export const MenuCabecera = ({ navigation }: PropiedadesMenuCabecera): React.JSX
       <Menu.Item
         onPress={() => {
           setMenuVisible(false);
+          navigation.navigate('PantallaAnalitica');
+        }}
+        title="Analítica"
+        leadingIcon="chart-box-outline"
+      />
+      <Menu.Item
+        onPress={() => {
+          setMenuVisible(false);
           navigation.navigate('PantallaConfiguracion');
         }}
         title="Configuración"

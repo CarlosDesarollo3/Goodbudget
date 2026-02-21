@@ -7,5 +7,6 @@ export type ParametrosNavegacion = {
   PantallaFormularioTransaccion: { idCuentaPredeterminada?: string } | { transaccion?: Transaccion } | undefined;
   PantallaCategorias: undefined;
   PantallaReglasRecurrentes: undefined;
+  PantallaAnalitica: undefined;
   PantallaConfiguracion: undefined;
 };

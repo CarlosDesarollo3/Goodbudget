@@ -2,6 +2,7 @@ import { Categoria, Cuenta, Grupo, ReglaRecurrente, Transaccion } from '@/Domini
 
 export interface RepositorioSobres {
   ListarGrupos(): Grupo[];
+  ListarCuentas(): Cuenta[];
   ListarCuentasPorGrupo(idGrupoPadre: string | null): Cuenta[];
   CrearGrupo(grupo: Grupo): void;
   CrearCuenta(cuenta: Cuenta): void;
@@ -15,6 +16,7 @@ export interface RepositorioSobres {
 
 export interface RepositorioTransacciones {
   CrearTransaccion(transaccion: Transaccion): void;
+  ListarTransacciones(): Transaccion[];
   ListarTransaccionesPorCuenta(idCuenta: string): Transaccion[];
   ExisteReferenciaIdempotencia(referenciaIdempotencia: string): boolean;
   ActualizarTransaccion(transaccion: Transaccion): void;
