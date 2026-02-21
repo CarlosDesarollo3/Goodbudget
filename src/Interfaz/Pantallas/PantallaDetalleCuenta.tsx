@@ -37,13 +37,9 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
           <FilaTransaccion
             key={transaccion.id}
             transaccion={transaccion}
+            idCuentaContexto={idCuenta}
             moneda={moneda}
             onPress={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
-            onEdit={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
-            onDelete={() => {
-              const { EliminarTransaccion } = UsarAlmacenAplicacion.getState();
-              EliminarTransaccion(transaccion.id);
-            }}
           />
         ))}
       </ScrollView>
