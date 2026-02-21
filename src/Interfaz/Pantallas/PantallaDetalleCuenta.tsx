@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Dialog, Portal, Snackbar, Surface, Text } from 'react-native-paper';
+import { Button, Dialog, Portal, SegmentedButtons, Snackbar, Surface, Text, TextInput } from 'react-native-paper';
 import { FormatearMoneda } from '@/Utilidades/Formatos';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -10,16 +10,40 @@ import { FilaTransaccion } from '@/Interfaz/Componentes/FilaTransaccion';
 import { RepositorioSqlite } from '@/Datos/Repositorios/RepositorioSqlite';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CerrarFilaAbierta, FilaDeslizableAcciones } from '@/Interfaz/Componentes/FilaDeslizableAcciones';
-import { Transaccion } from '@/Dominio/Modelos';
-import { EstadoVacioLista } from '@/Interfaz/Componentes/EstadoVacioLista';
+import { TipoTransaccion, Transaccion } from '@/Dominio/Modelos';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const repositorio = new RepositorioSqlite();
+type FiltroTipoTransaccion = 'TODOS' | TipoTransaccion.GASTO | TipoTransaccion.INGRESO | TipoTransaccion.TRANSFERENCIA;
+
+const ParsearFechaFiltro = (valor: string, finDeDia = false): number | null => {
+  const valorNormalizado = valor.trim();
+
+  if (!valorNormalizado) {
+    return null;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valorNormalizado)) {
+    return null;
+  }
+
+  const sufijoHora = finDeDia ? 'T23:59:59.999' : 'T00:00:00.000';
+  const fecha = new Date(`${valorNormalizado}${sufijoHora}`);
+  const timestamp = fecha.getTime();
+
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
 
 export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenProps<ParametrosNavegacion, 'PantallaDetalleCuenta'>): React.JSX.Element => {
   const { idCuenta } = route.params;
-  const { ObtenerBalanceCuenta, moneda, ConvertirCuentaEnGrupo, EliminarTransaccion } = UsarAlmacenAplicacion();
+  const { ObtenerBalanceCuenta, moneda, categorias, ConvertirCuentaEnGrupo, EliminarTransaccion } = UsarAlmacenAplicacion();
   const insets = useSafeAreaInsets();
   const [transacciones, setTransacciones] = React.useState<Transaccion[]>([]);
+  const [busqueda, setBusqueda] = React.useState('');
+  const [filtroTipo, setFiltroTipo] = React.useState<FiltroTipoTransaccion>('TODOS');
+  const [fechaDesde, setFechaDesde] = React.useState('');
+  const [fechaHasta, setFechaHasta] = React.useState('');
   const [transaccionEliminar, setTransaccionEliminar] = React.useState<Transaccion | null>(null);
   const [mostrarAvisoGesto, setMostrarAvisoGesto] = React.useState(false);
 
@@ -32,6 +56,54 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
       recargarTransacciones();
     }, [recargarTransacciones])
   );
+
+  const categoriasPorId = React.useMemo(() => {
+    return categorias.reduce<Record<string, string>>((acumulado, categoria) => {
+      acumulado[categoria.id] = categoria.nombre;
+      return acumulado;
+    }, {});
+  }, [categorias]);
+
+  const transaccionesFiltradas = React.useMemo(() => {
+    const terminoBusqueda = busqueda.trim().toLowerCase();
+    const inicio = ParsearFechaFiltro(fechaDesde);
+    const fin = ParsearFechaFiltro(fechaHasta, true);
+
+    return transacciones.filter((transaccion) => {
+      const nota = transaccion.nota?.toLowerCase() ?? '';
+      const categoria = (transaccion.idCategoria ? categoriasPorId[transaccion.idCategoria] : '')?.toLowerCase() ?? '';
+      const coincideBusqueda = !terminoBusqueda || nota.includes(terminoBusqueda) || categoria.includes(terminoBusqueda);
+
+      const coincideTipo = filtroTipo === 'TODOS' || transaccion.tipo === filtroTipo;
+
+      const fechaTransaccion = new Date(transaccion.fecha).getTime();
+      const coincideFechaInicio = inicio === null || fechaTransaccion >= inicio;
+      const coincideFechaFin = fin === null || fechaTransaccion <= fin;
+
+      return coincideBusqueda && coincideTipo && coincideFechaInicio && coincideFechaFin;
+    });
+  }, [busqueda, categoriasPorId, fechaDesde, fechaHasta, filtroTipo, transacciones]);
+
+  const transaccionesAgrupadasPorMes = React.useMemo(() => {
+    return transaccionesFiltradas.reduce<Array<{ clave: string; titulo: string; transacciones: Transaccion[] }>>((acumulado, transaccion) => {
+      const fecha = new Date(transaccion.fecha);
+      const claveMes = format(fecha, 'yyyy-MM');
+      const tituloMes = format(fecha, 'MMMM yyyy', { locale: es });
+      const grupoExistente = acumulado[acumulado.length - 1];
+
+      if (!grupoExistente || grupoExistente.clave !== claveMes) {
+        acumulado.push({
+          clave: claveMes,
+          titulo: tituloMes.charAt(0).toUpperCase() + tituloMes.slice(1),
+          transacciones: [transaccion]
+        });
+        return acumulado;
+      }
+
+      grupoExistente.transacciones.push(transaccion);
+      return acumulado;
+    }, []);
+  }, [transaccionesFiltradas]);
 
   const balanceCuenta = ObtenerBalanceCuenta(idCuenta);
 
@@ -54,6 +126,48 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
         </Text>
       </Surface>
 
+      <Surface style={styles.tarjetaFiltros} elevation={1}>
+        <TextInput
+          mode="outlined"
+          label="Buscar por nota o categoría"
+          value={busqueda}
+          onChangeText={setBusqueda}
+          left={<TextInput.Icon icon="magnify" />}
+        />
+
+        <SegmentedButtons
+          value={filtroTipo}
+          onValueChange={(valor) => setFiltroTipo(valor as FiltroTipoTransaccion)}
+          density="small"
+          style={styles.segmentosTipo}
+          buttons={[
+            { value: 'TODOS', label: 'Todos' },
+            { value: TipoTransaccion.GASTO, label: 'Gasto' },
+            { value: TipoTransaccion.INGRESO, label: 'Ingreso' },
+            { value: TipoTransaccion.TRANSFERENCIA, label: 'Transferencia' }
+          ]}
+        />
+
+        <View style={styles.filaFechas}>
+          <TextInput
+            mode="outlined"
+            label="Desde"
+            placeholder="AAAA-MM-DD"
+            value={fechaDesde}
+            onChangeText={setFechaDesde}
+            style={styles.inputFecha}
+          />
+          <TextInput
+            mode="outlined"
+            label="Hasta"
+            placeholder="AAAA-MM-DD"
+            value={fechaHasta}
+            onChangeText={setFechaHasta}
+            style={styles.inputFecha}
+          />
+        </View>
+      </Surface>
+
       <ScrollView
         contentContainerStyle={[styles.listaContenedora, { paddingBottom: 100 + insets.bottom }]}
         onStartShouldSetResponder={() => {
@@ -61,32 +175,31 @@ export const PantallaDetalleCuenta = ({ route, navigation }: NativeStackScreenPr
           return false;
         }}
       >
-        {transacciones.length === 0 ? (
-          <EstadoVacioLista
-            icono="cash-remove"
-            titulo="Aún no hay movimientos"
-            descripcion="Registra tu primera transacción para empezar a ver actividad y controlar el balance de la cuenta."
-            etiquetaCta="Añadir primera transacción"
-            onPressCta={() => navigation.navigate('PantallaFormularioTransaccion', { idCuentaPredeterminada: idCuenta })}
-          />
+        {transaccionesAgrupadasPorMes.length === 0 ? (
+          <Text style={styles.textoVacio}>No hay movimientos para los filtros seleccionados.</Text>
         ) : (
-          transacciones.map((transaccion) => (
-            <FilaDeslizableAcciones
-              key={transaccion.id}
-              id={transaccion.id}
-              onEditar={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
-              onEliminar={() => setTransaccionEliminar(transaccion)}
-              etiquetaEditar="Editar"
-              etiquetaEliminar="Eliminar"
-              onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
-            >
-              <FilaTransaccion
-                transaccion={transaccion}
-                idCuentaContexto={idCuenta}
-                moneda={moneda}
-                onPress={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
-              />
-            </FilaDeslizableAcciones>
+          transaccionesAgrupadasPorMes.map((grupo) => (
+            <View key={grupo.clave}>
+              <Text variant="titleMedium" style={styles.subtituloMes}>{grupo.titulo}</Text>
+              {grupo.transacciones.map((transaccion) => (
+                <FilaDeslizableAcciones
+                  key={transaccion.id}
+                  id={transaccion.id}
+                  onEditar={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
+                  onEliminar={() => setTransaccionEliminar(transaccion)}
+                  etiquetaEditar="Editar"
+                  etiquetaEliminar="Eliminar"
+                  onDeslizamientoInsuficiente={() => setMostrarAvisoGesto(true)}
+                >
+                  <FilaTransaccion
+                    transaccion={transaccion}
+                    idCuentaContexto={idCuenta}
+                    moneda={moneda}
+                    onPress={() => navigation.navigate('PantallaFormularioTransaccion', { transaccion })}
+                  />
+                </FilaDeslizableAcciones>
+              ))}
+            </View>
           ))
         )}
       </ScrollView>
@@ -148,6 +261,23 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: '#FFFFFF'
   },
+  tarjetaFiltros: {
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    gap: 10,
+    backgroundColor: '#FFFFFF'
+  },
+  segmentosTipo: {
+    marginTop: 2
+  },
+  filaFechas: {
+    flexDirection: 'row',
+    gap: 8
+  },
+  inputFecha: {
+    flex: 1
+  },
   textoSecundario: {
     opacity: 0.75,
     marginBottom: 4
@@ -158,7 +288,19 @@ const styles = StyleSheet.create({
   montoNegativo: {
     color: '#C4362D'
   },
-  listaContenedora: {},
+  listaContenedora: {
+    paddingBottom: 10
+  },
+  subtituloMes: {
+    marginTop: 10,
+    marginBottom: 6,
+    color: '#445063'
+  },
+  textoVacio: {
+    textAlign: 'center',
+    opacity: 0.7,
+    marginTop: 20
+  },
   accionesInferiores: {
     position: 'absolute',
     left: 16,
