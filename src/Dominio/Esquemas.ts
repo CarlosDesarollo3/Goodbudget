@@ -14,8 +14,12 @@ export const EsquemaTransaccionFormulario = z
     fecha: z.string().min(1, 'La fecha es obligatoria')
   })
   .superRefine((valor, contexto) => {
-    if ((valor.tipo === TipoTransaccion.GASTO || valor.tipo === TipoTransaccion.INGRESO) && !valor.idCuentaOrigen) {
+    if (valor.tipo === TipoTransaccion.GASTO && !valor.idCuentaOrigen) {
       contexto.addIssue({ code: z.ZodIssueCode.custom, message: 'Debe indicar la cuenta origen' });
+    }
+
+    if (valor.tipo === TipoTransaccion.INGRESO && !valor.idCuentaDestino) {
+      contexto.addIssue({ code: z.ZodIssueCode.custom, message: 'Debe indicar la cuenta destino' });
     }
 
     if (valor.tipo === TipoTransaccion.AJUSTE && !valor.idCuentaDestino) {
@@ -32,7 +36,11 @@ export const EsquemaTransaccionFormulario = z
     }
 
     if ((valor.tipo === TipoTransaccion.GASTO || valor.tipo === TipoTransaccion.INGRESO) && !valor.idCategoria) {
-      contexto.addIssue({ code: z.ZodIssueCode.custom, message: 'Debe seleccionar una categoría' });
+      contexto.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['idCategoria'],
+        message: 'Debe seleccionar una categoría'
+      });
     }
   });
 
