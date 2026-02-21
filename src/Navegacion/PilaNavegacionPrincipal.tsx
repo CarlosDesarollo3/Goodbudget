@@ -3,8 +3,8 @@ import { NavigationContainer, DarkTheme as TemaNavegacionOscuro, DefaultTheme as
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { StyleSheet, View } from 'react-native';
-import { FAB } from 'react-native-paper';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { FAB, Portal } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ParametrosNavegacion, ParametrosPestanasPrincipal } from './TiposNavegacion';
 import { PantallaInicio } from '@/Interfaz/Pantallas/PantallaInicio';
@@ -22,6 +22,17 @@ import { UsarAlmacenAplicacion } from '@/Estado/AlmacenAplicacion';
 
 const CLAVE_ULTIMA_CUENTA = 'ultimaCuentaUsada';
 const CLAVE_ULTIMA_CATEGORIA = 'ultimaCategoriaUsada';
+
+const BlurViewFallback: React.ComponentType<any> = View;
+
+const ObtenerBlurView = (): React.ComponentType<any> => {
+  try {
+    const modulo = require('expo-blur') as { BlurView?: React.ComponentType<any> };
+    return modulo.BlurView ?? BlurViewFallback;
+  } catch {
+    return BlurViewFallback;
+  }
+};
 
 const Pila = createNativeStackNavigator<ParametrosNavegacion>();
 const Pestanas = createBottomTabNavigator<ParametrosPestanasPrincipal>();
@@ -109,6 +120,7 @@ const AccionRapidaGlobal = ({
   const insets = useSafeAreaInsets();
   const [expandido, setExpandido] = React.useState(false);
   const { ObtenerValorConfiguracion } = UsarAlmacenAplicacion();
+  const BlurView = React.useMemo(() => ObtenerBlurView(), []);
 
   React.useEffect(() => {
     if (!rutasSinAccionRapida.includes(rutaActiva.nombre)) {
@@ -160,17 +172,30 @@ const AccionRapidaGlobal = ({
     : accionesTransaccion;
 
   return (
-    <FAB.Group
-      open={expandido}
-      visible
-      icon={expandido ? 'close' : 'plus'}
-      color={tema.colors.onPrimary}
-      fabStyle={{ backgroundColor: tema.colors.primary }}
-      style={[styles.fabGlobal, { bottom: 74 + insets.bottom }]}
-      backdropColor="transparent"
-      actions={acciones}
-      onStateChange={({ open }) => setExpandido(open)}
-    />
+    <>
+      {expandido ? (
+        <Portal>
+          <Pressable style={styles.overlayToque} onPress={() => setExpandido(false)}>
+            <BlurView
+              intensity={40}
+              tint={tema.dark ? 'dark' : 'light'}
+              style={styles.overlayBlur}
+            />
+          </Pressable>
+        </Portal>
+      ) : null}
+      <FAB.Group
+        open={expandido}
+        visible
+        icon={expandido ? 'close' : 'plus'}
+        color={tema.colors.onPrimary}
+        fabStyle={{ backgroundColor: tema.colors.primary }}
+        style={[styles.fabGlobal, { bottom: 74 + insets.bottom }]}
+        backdropColor="transparent"
+        actions={acciones}
+        onStateChange={({ open }) => setExpandido(open)}
+      />
+    </>
   );
 };
 
@@ -244,8 +269,14 @@ const styles = StyleSheet.create({
   contenedorNavegacion: {
     flex: 1
   },
+  overlayToque: {
+    ...StyleSheet.absoluteFillObject
+  },
+  overlayBlur: {
+    flex: 1
+  },
   fabGlobal: {
     position: 'absolute',
-    right: 0
+    right: 16
   }
 });
